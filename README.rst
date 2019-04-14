@@ -6,7 +6,7 @@ Communicate with a Sensirion SHTxx Smart Gadget.
 
 A Raspberry Pi is used for the Bluetooth Low Energy connectivity and the MSL-Network_ package
 allows any computer (independent of the operating system) on the same network as the Raspberry Pi
-to request information from the Smart Gadget's that are within the Bluetooth range of the Pi.
+to request information from the Smart Gadgets that are within bluetooth range of the Pi.
 
 Tested with a Raspberry Pi 3 Model B+ running Raspbian GNU/Linux 9 (stretch).
 
