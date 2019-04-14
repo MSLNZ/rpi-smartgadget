@@ -47,7 +47,7 @@ On another computer that is on the same network as the Raspberry Pi run
 .. code-block:: pycon
 
    >>> from smartgadget import connect
-   >>> rpi = connect(host='change to be the hostname or IP address of the Raspberry Pi')
+   >>> rpi = connect(host='IP address of Raspberry Pi', assert_hostname=False)
 
 To find out what can be requested from the SmartGadget Service that is running
 on the Raspberry Pi enter
