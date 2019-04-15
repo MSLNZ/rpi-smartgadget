@@ -3,7 +3,7 @@ from setuptools import setup
 
 on_rpi = platform.machine().startswith('arm')
 
-install_requires = ['msl-network', 'paramiko']
+install_requires = ['msl-network>=0.4']
 if on_rpi:
     install_requires.append('bluepy')
 
