@@ -1,5 +1,5 @@
 import subprocess
-from typing import List, Tuple
+from typing import List
 
 from msl.network import Service
 try:
@@ -39,11 +39,11 @@ class SmartGadgetService(Service):
         """Returns the dew point [deg C] for the specified MAC address."""
         return self._devices[mac_address].dewpoint(temperature=temperature, humidity=humidity)
 
-    def temperature_humidity(self, mac_address) -> Tuple[float]:
+    def temperature_humidity(self, mac_address) -> List[float]:
         """Returns the temperature [deg C] and humidity [%RH] for the specified MAC address."""
         return self._devices[mac_address].temperature_humidity()
 
-    def temperature_humidity_dewpoint(self, mac_address) -> Tuple[float]:
+    def temperature_humidity_dewpoint(self, mac_address) -> List[float]:
         """Returns the temperature [deg C] and humidity [%RH] for the specified MAC address."""
         return self._devices[mac_address].temperature_humidity_dewpoint()
 
