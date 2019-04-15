@@ -3,13 +3,14 @@ from msl.network import LinkedClient
 
 class SmartGadgetClient(LinkedClient):
 
-    def __init__(self, **kwargs):
+    def __init__(self, service_name, **kwargs):
         """Connect to the Raspberry Pi and link with the SmartGadget
         :class:`~msl.network.service.Service`.
 
+        :param str service_name: The name of the :class:`~msl.network.service.Service` to link with.
         :param kwargs: Keyword arguments that are passed to :func:`~msl.network.client.connect`.
         """
-        super(SmartGadgetClient, self).__init__('SmartGadget', **kwargs)
+        super().__init__(service_name, **kwargs)
 
     def disconnect(self):
         """

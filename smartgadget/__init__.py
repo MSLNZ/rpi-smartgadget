@@ -21,7 +21,7 @@ def connect(*, host='raspberrypi', rpi_username='pi', rpi_password=None, timeout
                       ssh_password=rpi_password, timeout=timeout, as_sudo=True, **kwargs)
 
     kwargs['host'] = host
-    return SmartGadgetClient(**kwargs)
+    return SmartGadgetClient('SmartGadget', **kwargs)
 
 
 def start_service_on_rpi():
