@@ -84,8 +84,8 @@ on the Raspberry Pi enter
                 rssi: (mac_address) -> int
                 scan: (timeout=10, passive=False) -> List[str]
                 temperature: (mac_address) -> float
-                temperature_humidity: (mac_address) -> Tuple[float]
-                temperature_humidity_dewpoint: (mac_address) -> Tuple[float]
+                temperature_humidity: (mac_address) -> List[float]
+                temperature_humidity_dewpoint: (mac_address) -> List[float]
             language: Python 3.5.3
             max_clients: -1
             os: Linux 4.14.98-v7+ armv7l
@@ -138,11 +138,9 @@ Dependencies
 
 * Python 3.5+
 * MSL-Network_
-* paramiko_
 * bluepy_
 
 .. _MSL-Network: https://github.com/MSLNZ/msl-network
 .. _BlueZ: http://www.bluez.org/
 .. _virtual environment: https://docs.python.org/3/tutorial/venv.html
-.. _paramiko: http://www.paramiko.org/
 .. _bluepy: https://github.com/IanHarvey/bluepy
