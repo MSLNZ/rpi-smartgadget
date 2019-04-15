@@ -2,7 +2,7 @@
 
 # install the Python prerequisites
 sudo apt update
-sudo apt install python3-venv libssl-dev -y
+sudo apt install python3-venv libssl-dev libffi-dev -y
 
 # install the rpi-smartgadget package in a virtual environment in the home directory
 cd ~
