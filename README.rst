@@ -42,19 +42,26 @@ Usage
 
 Place a Raspberry Pi in a room where the Smart Gadgets are within Bluetooth range.
 
-On another computer that is on the same network as the Raspberry Pi run
+On another computer that is on the same network as the Raspberry Pi run the following.
+
+You will have to change the value of *host* below for your Raspberry Pi. The reason for including
+``assert_hostname=False`` is because we show that we are specifying an IP address for the value
+of `host`, however, the hostname of the Raspberry Pi is (most likely) ``'raspberrypi'`` and so
+``'xxx.xxx.xxx.xxx'`` does not equal ``'raspberrypi'`` when verifying the hostname. If you can
+``ping raspberrypi`` and get a reply then you can ignore the ``assert_hostname`` keyword argument
+and use ``host='raspberrypi'`` (or whatever your Pi's hostname is).
 
 .. code-block:: pycon
 
    >>> from smartgadget import connect
-   >>> rpi = connect(host='IP address of Raspberry Pi', assert_hostname=False)
+   >>> rpi = connect(host='xxx.xxx.xxx.xxx', assert_hostname=False)
 
 To find out what can be requested from the SmartGadget Service that is running
 on the Raspberry Pi enter
 
 .. code-block:: pycon
 
-    >>> print(rpi.manager(as_yaml=True))
+    >>> print(rpi.manager(as_string=True))
     Manager[raspberrypi:1875]
         attributes:
             identity: () -> dict
