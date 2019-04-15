@@ -18,7 +18,9 @@ def connect(*, host='raspberrypi', rpi_username='pi', rpi_password=None, timeout
     console_script_path = '/home/{}/shtenv/bin/smartgadget'.format(rpi_username)
     ssh.start_manager(host, console_script_path, ssh_username=rpi_username,
                       ssh_password=rpi_password, timeout=timeout, as_sudo=True, **kwargs)
-    return SmartGadgetClient(host, **kwargs)
+
+    kwargs['host'] = host
+    return SmartGadgetClient(**kwargs)
 
 
 def start_service_on_rpi():
@@ -32,4 +34,5 @@ def start_service_on_rpi():
             'The Manager is using a login for authentication but the SmartGadgetService '
             'does not know the username and password to use to connect to the Manager'
         )
+
     manager.run_services(SmartGadgetService(), **kwargs)
