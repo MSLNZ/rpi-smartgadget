@@ -51,7 +51,7 @@ and so ``'xxx.xxx.xxx.xxx'`` won't equal ``'raspberrypi'`` when the security of 
 checked behind the scenes. If you specify the hostname of the Raspberry Pi then you can do hostname
 verification and not include the ``assert_hostname`` keyword argument. In general, use
 ``assert_hostname=False`` at your own risk if there is a possibility of a man-in-the-middle hijack
-in your connection to the Pi.
+between your computer and the remote computer.
 
 .. code-block:: pycon
 
@@ -108,6 +108,8 @@ disconnect from the Raspberry Pi
    dc:01:f6:33:d7:42 [21.77, 50.27, 10.93]
    >>> rpi.disconnect()
 
+You can send a request to the SmartGadget Service either `synchronously or asynchronously`_.
+
 Updating BlueZ
 --------------
 
@@ -147,3 +149,4 @@ Dependencies
 .. _virtual environment: https://docs.python.org/3/tutorial/venv.html
 .. _bluepy: https://github.com/IanHarvey/bluepy
 .. _SSH: https://www.ssh.com/ssh/
+.. _synchronously or asynchronously: https://msl-network.readthedocs.io/en/latest/concurrency_async.html#asynchronous-programming
