@@ -46,10 +46,12 @@ On another computer that is on the same network as the Raspberry Pi run the foll
 
 You will have to change the value of *host* below for your Raspberry Pi. The reason for including
 ``assert_hostname=False`` is because we show that we are specifying an IP address for the value
-of `host`, however, the hostname of the Raspberry Pi is (most likely) ``'raspberrypi'`` and so
-``'xxx.xxx.xxx.xxx'`` does not equal ``'raspberrypi'`` when verifying the hostname. If you can
-``ping raspberrypi`` and get a reply then you can ignore the ``assert_hostname`` keyword argument
-and use ``host='raspberrypi'`` (or whatever your Pi's hostname is).
+of `host`instead of its hostname. The hostname of the Raspberry Pi is (most likely) ``'raspberrypi'``
+and so ``'xxx.xxx.xxx.xxx'`` won't equal ``'raspberrypi'`` when the security of the connection is
+checked behind the scenes. If you specify the hostname of the Raspberry Pi then you can do hostname
+verification and not include the ``assert_hostname`` keyword argument. In general, use
+``assert_hostname=False`` at your own risk if there is a possibility of a man-in-the-middle hijack
+in your connection to the Pi.
 
 .. code-block:: pycon
 
