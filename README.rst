@@ -14,7 +14,7 @@ Installation
 ------------
 
 To set up the Raspberry Pi run the following commands. Instructions for using SSH_ to interface with
-a Raspberry Pi can found `here <https://www.raspberrypi.org/documentation/remote-access/ssh/>`_
+a Raspberry Pi can be found `here <https://www.raspberrypi.org/documentation/remote-access/ssh/>`_.
 
 The following command is optional, it will update the installed packages on
 the Raspberry Pi
