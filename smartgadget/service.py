@@ -3,7 +3,7 @@ from typing import List
 
 from msl.network import Service
 try:
-    from bluepy.btle import Scanner
+    from bluepy.btle import Scanner, BTLEDisconnectError
 except ImportError:
     pass  # not on the Raspberry Pi
 
@@ -16,16 +16,35 @@ class SmartGadgetService(Service):
         super(SmartGadgetService, self).__init__(name='SmartGadget')
         self._scanner = Scanner()
         self._devices = {}
+        self._failed_connections = []
 
-    def scan(self, timeout=10, passive=False) -> List[str]:
-        """Returns a list of MAC addresses of the Smart Gadgets that were found."""
+    def scan(self, timeout=10, passive=False, strict=True) -> List[str]:
+        """Scan for Smart Gadgets that are within Bluetooth range.
+
+        :param float timeout: Scans for devices for the given `timeout` in seconds
+        :param bool passive: Use active or passive scanning to obtain more information when connecting.
+        :param bool strict: Whether to raise an error if a Smart Gadget could not be connected to.
+        :return: A list of MAC addresses of the Smart Gadgets that have been connected to.
+        :rtype: list of str
+        """
         self._disconnect_devices()
         for dev in self._scanner.scan(timeout=timeout, passive=passive):
-            device = SmartGadget.create(dev)
-            if device is not None:
-                self._devices[dev.addr] = device
+            try:
+                device = SmartGadget.create(dev)
+            except BTLEDisconnectError:
+                if strict:
+                    raise
+                else:
+                    self._failed_connections.append(dev.addr)
+            else:
+                if device is not None:
+                    self._devices[dev.addr] = device
 
         return [dev.addr for dev in self._devices.values()]
+
+    def failed_connections(self) -> List[str]:
+        """Returns a list of MAC addresses that could not be connected to during a :meth:`.scan`."""
+        return self._failed_connections
 
     def temperature(self, mac_address) -> float:
         """Returns the temperature [deg C] for the specified MAC address."""
@@ -90,3 +109,4 @@ class SmartGadgetService(Service):
             except:
                 pass
         self._devices.clear()
+        self._failed_connections.clear()
