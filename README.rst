@@ -8,7 +8,7 @@ A Raspberry Pi is used for the Bluetooth Low Energy connectivity and the MSL-Net
 allows any computer on the same network as the Raspberry Pi to request information from the
 Smart Gadgets that are within Bluetooth range of the Pi.
 
-Tested with a Raspberry Pi 3 Model B+ running Raspbian GNU/Linux 9 (stretch).
+Tested with a Raspberry Pi 3 Model B+ running Raspbian (stretch and buster).
 
 Installation
 ------------
@@ -44,7 +44,7 @@ Place a Raspberry Pi in a room where the Smart Gadgets are within Bluetooth rang
 
 On another computer that is on the same network as the Raspberry Pi run the following.
 
-You will have to change the value of *host* below for your Raspberry Pi. The reason for including
+NOTE: You will have to change the value of *host* below for your Raspberry Pi. The reason for including
 ``assert_hostname=False`` is because we show that we are specifying an IP address for the value
 of `host` instead of its hostname. The hostname of the Raspberry Pi is (most likely) ``'raspberrypi'``
 and so ``'xxx.xxx.xxx.xxx'`` won't equal ``'raspberrypi'`` when the security of the connection is
@@ -108,14 +108,13 @@ disconnect from the Raspberry Pi
    dc:01:f6:33:d7:42 [21.77, 50.27, 10.93]
    >>> rpi.disconnect()
 
-You can send a request to the SmartGadget Service either `synchronously or asynchronously`_.
 
 Updating BlueZ
 --------------
 
 BlueZ_ is a program that is used to communicate with Bluetooth devices on Linux and
 it is what is used on the Raspberry Pi. **RPi-SmartGadget** has been tested with
-versions 5.43 and 5.44. Other versions may work as well.
+versions 5.43, 5.44 and 5.50. Other versions may work as well.
 
 A script is included with **RPi-SmartGadget** that will update your version of
 BlueZ_. Since we installed **RPi-SmartGadget** in a `virtual environment`_ on
@@ -131,7 +130,8 @@ and then execute
 
    bluez-update
 
-This will update to BlueZ_ 5.50. To install version 5.47 of BlueZ_ run
+This will update to BlueZ_ 5.50 (the latest version at the time of writing the script).
+To install version 5.47 of BlueZ_ run
 
 .. code-block:: console
 
@@ -142,11 +142,10 @@ Dependencies
 
 * Python 3.5+
 * MSL-Network_
-* bluepy_
+* bluepy_ -- only installed on the Raspberry Pi
 
 .. _MSL-Network: https://github.com/MSLNZ/msl-network
 .. _BlueZ: http://www.bluez.org/
 .. _virtual environment: https://docs.python.org/3/tutorial/venv.html
 .. _bluepy: https://github.com/IanHarvey/bluepy
 .. _SSH: https://www.ssh.com/ssh/
-.. _synchronously or asynchronously: https://msl-network.readthedocs.io/en/latest/concurrency_async.html#asynchronous-programming
