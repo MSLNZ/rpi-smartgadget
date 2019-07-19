@@ -66,35 +66,42 @@ on the Raspberry Pi enter
     >>> print(rpi.manager(as_string=True))
     Manager[raspberrypi:1875]
         attributes:
-            identity: () -> dict
-            link: (service:str) -> bool
-        language: Python 3.5.3
-        os: Linux 4.14.98-v7+ armv7l
+            identity() -> dict
+            link(service:str) -> bool
+        language: Python 3.7.3
+        os: Linux 4.19.57-v7+ armv7l
     Clients [1]:
-        Client[192.168.1.71:54137]
+        LinkedClient[192.168.1.71:54137]
             language: Python 3.7.3
             os: Windows 10 AMD64
     Services [1]:
-        SmartGadget[localhost:56422]
+        SmartGadget[localhost:53576]
             attributes:
-                battery: (mac_address) -> int
-                dewpoint: (mac_address, temperature=None, humidity=None) -> float
-                disconnect_service: ()
-                humidity: (mac_address) -> float
-                info: (mac_address) -> dict
-                restart_bluetooth: ()
-                rssi: (mac_address) -> int
-                scan: (timeout=10, passive=False) -> List[str]
-                temperature: (mac_address) -> float
-                temperature_humidity: (mac_address) -> List[float]
-                temperature_humidity_dewpoint: (mac_address) -> List[float]
-            language: Python 3.5.3
+                battery(mac_address) -> int
+                connect_gadget(mac_address, strict=True) -> bool
+                connect_gadgets(mac_addresses, strict=True) -> List[list]
+                connected_gadgets() -> List[str]
+                dewpoint(mac_address, temperature=None, humidity=None) -> float
+                disconnect_gadget(mac_address)
+                disconnect_gadgets()
+                disconnect_service()
+                humidity(mac_address) -> float
+                info(mac_address) -> dict
+                logger_interval(mac_address) -> int
+                restart_bluetooth()
+                rssi(mac_address) -> int
+                scan(timeout=10, passive=False) -> List[str]
+                set_logger_interval(mac_address, milliseconds)
+                temperature(mac_address) -> float
+                temperature_humidity(mac_address) -> List[float]
+                temperature_humidity_dewpoint(mac_address) -> List[float]
+            language: Python 3.7.3
             max_clients: -1
-            os: Linux 4.14.98-v7+ armv7l
+            os: Linux 4.19.57-v7+ armv7l
 
 The information about the Manager and which Clients and Services are connected to it
 will be shown. The SmartGadget Service indicates that it has the following methods
-that can be called: battery, dewpoint, disconnect_service, ...
+that can be called: battery, connect_gadget, connect_gadgets, ...
 
 Next we scan for Smart Gadgets, request the temperature, humidity and dew point and then
 disconnect from the Raspberry Pi
