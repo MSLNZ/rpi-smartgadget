@@ -14,17 +14,6 @@ class SmartGadget(Peripheral):
         super(SmartGadget, self).__init__(deviceAddr=scan_entry)
         self._scan_entry = scan_entry
 
-    @staticmethod
-    def create(scan_entry):
-        """:param scan_entry: A bluepy.btle.ScanEntry object."""
-        name = scan_entry.getValueText(scan_entry.COMPLETE_LOCAL_NAME)
-        if name == SHT3X.NAME:
-            return SHT3X(scan_entry)
-        elif name == SHTC1.NAME:
-            return SHTC1(scan_entry)
-        else:
-            return None
-
     def temperature(self):
         """float: the temperature [deg C]"""
         raise NotImplementedError()
@@ -86,12 +75,10 @@ class SmartGadget(Peripheral):
             'rssi': self.rssi()
         }
 
-        try:
-            info['oldest_timestamp_ms'] = self._unpack('<Q', self.OLDEST_TIMESTAMP_MS_CHARACTERISTIC_UUID)
-            info['newest_timestamp_ms'] = self._unpack('<Q', self.NEWEST_TIMESTAMP_MS_CHARACTERISTIC_UUID)
-            info['logger_interval_ms'] = self._unpack('<L', self.LOGGER_INTERVAL_MS_CHARACTERISTIC_UUID)
-        except AttributeError:
-            pass
+        if self.NAME == SHT3X.NAME:
+            info['oldest_timestamp_ms'] = self.oldest_timestamp()
+            info['newest_timestamp_ms'] = self.newest_timestamp()
+            info['logger_interval_ms'] = self.logger_interval()
 
         return info
 
@@ -125,8 +112,10 @@ class SHT3X(SmartGadget):
     # the following UUIDs are taken from
     # https://github.com/Sensirion/SmartGadget-Firmware/blob/master/Simple_BLE_Profile_Description.pdf
 
+    SYNC_TIME_MS_CHARACTERISTIC_UUID = UUID('0000f235-b38d-4985-720e-0f993a68ee41')
     OLDEST_TIMESTAMP_MS_CHARACTERISTIC_UUID = UUID('0000f236-b38d-4985-720e-0f993a68ee41')
     NEWEST_TIMESTAMP_MS_CHARACTERISTIC_UUID = UUID('0000f237-b38d-4985-720e-0f993a68ee41')
+    START_LOGGER_DOWNLOAD_CHARACTERISTIC_UUID = UUID('0000f238-b38d-4985-720e-0f993a68ee41')
     LOGGER_INTERVAL_MS_CHARACTERISTIC_UUID = UUID('0000f239-b38d-4985-720e-0f993a68ee41')
     TEMPERATURE_CHARACTERISTIC_UUID = UUID('00002235-b38d-4985-720e-0f993a68ee41')
     HUMIDITY_CHARACTERISTIC_UUID = UUID('00001235-b38d-4985-720e-0f993a68ee41')
@@ -139,3 +128,16 @@ class SHT3X(SmartGadget):
 
     def temperature_humidity(self):
         return self.temperature(), self.humidity()
+
+    def oldest_timestamp(self):
+        return self._unpack('<Q', self.OLDEST_TIMESTAMP_MS_CHARACTERISTIC_UUID)
+
+    def newest_timestamp(self):
+        return self._unpack('<Q', self.NEWEST_TIMESTAMP_MS_CHARACTERISTIC_UUID)
+
+    def logger_interval(self):
+        return self._unpack('<L', self.LOGGER_INTERVAL_MS_CHARACTERISTIC_UUID)
+
+    def set_logger_interval(self, ms):
+        characteristic = self.getCharacteristics(uuid=self.LOGGER_INTERVAL_MS_CHARACTERISTIC_UUID)[0]
+        characteristic.write(struct.pack('<L', int(ms)))
