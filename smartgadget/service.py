@@ -21,8 +21,8 @@ class SmartGadgetService(Service):
     def scan(self, timeout=10, passive=False) -> List[str]:
         """Scan for Smart Gadgets that are within Bluetooth range.
 
-        :param float timeout: Scans for devices for the given `timeout` in seconds
-        :param bool passive: Use active or passive scanning to obtain more information when connecting.
+        :param float timeout: The number of seconds to scan for Smart Gadgets.
+        :param bool passive: Use active (to obtain more information when connecting) or passive scanning.
         :return: A list of MAC addresses of the Smart Gadgets that are available.
         :rtype: list of str
         """
@@ -38,6 +38,21 @@ class SmartGadgetService(Service):
     def connect_gadget(self, mac_address, strict=True) -> bool:
         """Connect to the specified Smart Gadget.
 
+        It is not necessary to call this method to connect to a Smart Gadget via Bluetooth
+        before fetching data from it. The Bluetooth connection will automatically be
+        created and destroyed when requesting information from the Smart Gadget if the
+        Bluetooth connection does not already exist.
+
+        Establishing a Bluetooth connection to a Smart Gadget takes approximately 7 seconds.
+        If you are only requesting data from a couple of Smart Gadgets then connecting to each
+        Smart Gadget at the beginning of your script and then fetching data in a loop would
+        be more efficient if you want to fetch data as fast as possible (`fast` is used very
+        loosely here since it takes approximately 1.5 seconds to read data from a Smart Gadget
+        even if the Raspberry Pi already has a Bluetooth connection to it). However, there are
+        hardware limits to how many Smart Gadgets can simultaneously have a Bluetooth connection
+        with the Raspberry Pi. So, there is a compromise between how `fast` your program can
+        fetch data and how many Smart Gadgets you want to fetch data from.
+
         :param str mac_address: The MAC address of the Smart Gadget to connect to.
         :param bool strict: Whether to raise an error if the Smart Gadget could not be connected to.
         :return: Whether the connection was successful.
@@ -48,6 +63,21 @@ class SmartGadgetService(Service):
 
     def connect_gadgets(self, mac_addresses, strict=True) -> List[list]:
         """Connect to the specified Smart Gadgets.
+
+        It is not necessary to call this method to connect to a Smart Gadget via Bluetooth
+        before fetching data from it. The Bluetooth connection will automatically be
+        created and destroyed when requesting information from the Smart Gadget if the
+        Bluetooth connection does not already exist.
+
+        Establishing a Bluetooth connection to a Smart Gadget takes approximately 7 seconds.
+        If you are only requesting data from a couple of Smart Gadgets then connecting to each
+        Smart Gadget at the beginning of your script and then fetching data in a loop would
+        be more efficient if you want to fetch data as fast as possible (`fast` is used very
+        loosely here since it takes approximately 1.5 seconds to read data from a Smart Gadget
+        even if the Raspberry Pi already has a Bluetooth connection to it). However, there are
+        hardware limits to how many Smart Gadgets can simultaneously have a Bluetooth connection
+        with the Raspberry Pi. So, there is a compromise between how `fast` your program can
+        fetch data and how many Smart Gadgets you want to fetch data from.
 
         :param list mac_addresses: A list of MAC addresses of the Smart Gadget to connect to.
         :param bool strict: Whether to raise an error if a Smart Gadget could not be connected to.
