@@ -1,29 +1,69 @@
+"""
+Base class for a Smart Gadget.
+"""
 import struct
+from typing import Union, Tuple
 
 try:
-    from bluepy.btle import Peripheral, UUID, AssignedNumbers
-except ImportError:
-    Peripheral = object  # not on the Raspberry Pi
-    UUID = lambda u: None
+    from bluepy.btle import Peripheral, DefaultDelegate, UUID
+except ImportError:  # then not on the Raspberry Pi
+    Peripheral, DefaultDelegate, UUID = object, object, lambda u: ()
 
 
 class SmartGadget(Peripheral):
 
-    def __init__(self, scan_entry):
-        """:param scan_entry: A bluepy.btle.ScanEntry object."""
-        super(SmartGadget, self).__init__(deviceAddr=scan_entry)
-        self._scan_entry = scan_entry
+    # The following UUID's were taken from
+    # https://www.bluetooth.com/specifications/gatt/characteristics/
+    # bluepy has these available as AssignedNumbers attributes, but bluepy cannot be pip-installed on Windows
+    DEVICE_NAME_CHARACTERISTIC_UUID = UUID(0x2a00)
+    APPEARANCE_CHARACTERISTIC_UUID = UUID(0x2a01)
+    PERIPHERAL_PREFERRED_CONNECTION_PARAMETERS_CHARACTERISTIC_UUID = UUID(0x2a04)
+    BATTERY_LEVEL_CHARACTERISTIC_UUID = UUID(0x2a19)
+    SYSTEM_ID_CHARACTERISTIC_UUID = UUID(0x2a23)
+    MODEL_NUMBER_STRING_CHARACTERISTIC_UUID = UUID(0x2a24)
+    SERIAL_NUMBER_STRING_CHARACTERISTIC_UUID = UUID(0x2a25)
+    HARDWARE_REVISION_STRING_CHARACTERISTIC_UUID = UUID(0x2a27)
+    FIRMWARE_REVISION_STRING_CHARACTERISTIC_UUID = UUID(0x2a26)
+    SOFTWARE_REVISION_STRING_CHARACTERISTIC_UUID = UUID(0x2a28)
+    MANUFACTURER_NAME_STRING_CHARACTERISTIC_UUID = UUID(0x2a29)
 
-    def temperature(self):
-        """float: the temperature [deg C]"""
-        raise NotImplementedError()
+    def __init__(self, device, interface=None):
+        """
+        :param device: A MAC address as a :class:`str` or a :class:`~bluepy.btle.ScanEntry` object.
+        :param int interface: The Bluetooth interface to use for the connection.
+                              For example, 0 or None means ``/dev/hci0``, 1 means ``/dev/hci1``
+        """
+        super(SmartGadget, self).__init__(deviceAddr=device, addrType='random', iface=interface)
+        self._rssi = None if isinstance(device, str) else device.rssi
+        self.withDelegate(NotificationHandler(self))
+        self._characteristics = {}
 
-    def humidity(self):
-        """float: the humidity [%RH]"""
-        raise NotImplementedError()
+    def temperature(self) -> float:
+        """Returns the temperature [degree C]"""
+        raise NotImplementedError
 
-    def dewpoint(self, temperature=None, humidity=None):
-        """float: the dew point [deg C]"""
+    def humidity(self) -> float:
+        """Returns the humidity [%RH]"""
+        raise NotImplementedError
+
+    def temperature_humidity(self) -> Tuple[float, float]:
+        """Returns the temperature [degree C] and humidity [%RH]"""
+        raise NotImplementedError
+
+    def battery(self) -> int:
+        """Returns the battery level [%]"""
+        raise NotImplementedError
+
+    def info(self) -> dict:
+        """Returns all available information from the Smart Gadget."""
+        raise NotImplementedError
+
+    def dewpoint(self, temperature=None, humidity=None) -> float:
+        """Returns the dewpoint [degree C].
+
+        If the `temperature` and/or `humidity` value(s) are not specified
+        then they will be read from the Smart Gadget.
+        """
         if temperature is None and humidity is None:
             temperature, humidity = self.temperature_humidity()
         if temperature is None:
@@ -31,113 +71,96 @@ class SmartGadget(Peripheral):
         if humidity is None:
             humidity = self.humidity()
 
-        dew = None  # TODO calculation
-        return dew
+        # TODO get formula from JLS.
+        #  For now use Equation (1) from https://doi.org/10.1175/BAMS-86-2-225
+        return temperature - (100. - humidity) / 5.
 
-    def temperature_humidity(self):
-        """float, float: the temperature [deg C] and humidity [%RH]"""
-        raise NotImplementedError()
-
-    def temperature_humidity_dewpoint(self):
-        """float, float, float: the temperature [deg C], humidity [%RH] and dew point [deg C]"""
+    def temperature_humidity_dewpoint(self) -> Tuple[float, float, float]:
+        """Returns the temperature [degree C], humidity [%RH] and dew point [degree C]."""
         t, h = self.temperature_humidity()
         return t, h, self.dewpoint(temperature=t, humidity=h)
 
-    def battery(self):
-        """float: the battery level [%]"""
-        return self._unpack('<B', AssignedNumbers.batteryLevel)
+    def rssi(self) -> Union[int, None]:
+        """Returns the Received Signal Strength Indication for the last received broadcast from the device.
 
-    def rssi(self):
-        """int: Received Signal Strength Indication for the last received broadcast from the device"""
-        return self._scan_entry.rssi
-
-    def info(self):
-        """Returns a :class:`dict` of all parameters from the Smart Gadget.
-
-        Calling this method can take a very long time.
+        Only valid if the :class:`SmartGadget` was initialized with a :class:`~bluepy.btle.ScanEntry`
+        object, otherwise returns :data:`None`.
         """
-        t, h = self.temperature_humidity()
-        info = {
-            'device_name': self.NAME,  # equal to self._read(AssignedNumbers.deviceName).decode()
-            'appearance': self._unpack('<H', AssignedNumbers.appearance),
-            'peripheral_preferred_connection_parameters': self._unpack('<Q', AssignedNumbers.peripheralPreferredConnectionParameters),
-            'system_id': self._unpack('<Q', AssignedNumbers.systemId),
-            'manufacturer': self._read(AssignedNumbers.manufacturerNameString).decode(),
-            'model': self._read(AssignedNumbers.modelNumberString).decode(),
-            'serial': self._read(AssignedNumbers.serialNumberString).decode(),
-            'hardware_revision': self._read(AssignedNumbers.hardwareRevisionString).decode(),
-            'firmware_revision': self._read(AssignedNumbers.firmwareRevisionString).decode(),
-            'software_revision': self._read(AssignedNumbers.softwareRevisionString).decode(),
-            'temperature': t,
-            'humidity': h,
-            'dewpoint': self.dewpoint(temperature=t, humidity=h),
-            'battery': self.battery(),
-            'rssi': self.rssi()
-        }
+        return self._rssi
 
-        if self.NAME == SHT3X.NAME:
-            info['oldest_timestamp_ms'] = self.oldest_timestamp()
-            info['newest_timestamp_ms'] = self.newest_timestamp()
-            info['logger_interval_ms'] = self.logger_interval()
+    def _read(self, hnd_or_uuid, fmt=None):
+        """Read data.
 
-        return info
+        :param hnd_or_uuid: A handle (int) or uuid
+        :param fmt: The format to pass to struct.unpack(), if None then assumes an ASCII string.
+        :return: The data.
+        """
+        if isinstance(hnd_or_uuid, int):  # handle
+            data = self.readCharacteristic(hnd_or_uuid)
+        else:  # uuid
+            try:
+                c = self._characteristics[hnd_or_uuid]
+            except KeyError:
+                c = self.getCharacteristics(uuid=hnd_or_uuid)[0]
+                self._characteristics[hnd_or_uuid] = c
+            data = c.read()
+        if fmt is None:
+            return data.decode()
+        values = struct.unpack(fmt, data)
+        if len(values) == 1:
+            return values[0]
+        return values
 
-    def _read(self, uuid):
-        characteristic = self.getCharacteristics(uuid=uuid)[0]
-        return characteristic.read()
+    def _write(self, hnd_or_uuid, fmt, value, with_response=False):
+        """Write a value.
 
-    def _unpack(self, fmt, uid):
-        return struct.unpack(fmt, self._read(uid))[0]
-
-
-class SHTC1(SmartGadget):
-    NAME = 'SHTC1 smart gadget'
-
-    TEMPERATURE_HUMIDITY_CHARACTERISTIC_UUID = UUID('0000aa21-0000-1000-8000-00805f9b34fb')
-
-    def temperature(self):
-        return self.temperature_humidity()[0]
-
-    def humidity(self):
-        return self.temperature_humidity()[1]
-
-    def temperature_humidity(self):
-        t, h = struct.unpack('<hh', self._read(self.TEMPERATURE_HUMIDITY_CHARACTERISTIC_UUID))
-        return t / 100., h / 100.
+        :param hnd_or_uuid: A handle (int) or uuid
+        :param fmt: The format to pass to struct.pack()
+        :param value: The value to write
+        """
+        data = struct.pack(fmt, value)
+        if isinstance(hnd_or_uuid, int):  # handle
+            self.writeCharacteristic(hnd_or_uuid, data, withResponse=with_response)
+        else:  # uuid
+            try:
+                c = self._characteristics[hnd_or_uuid]
+            except KeyError:
+                c = self.getCharacteristics(uuid=hnd_or_uuid)[0]
+                self._characteristics[hnd_or_uuid] = c
+            c.write(data, withResponse=with_response)
 
 
-class SHT3X(SmartGadget):
-    NAME = 'Smart Humigadget'
+class NotificationHandler(DefaultDelegate):
 
-    # the following UUIDs are taken from
-    # https://github.com/Sensirion/SmartGadget-Firmware/blob/master/Simple_BLE_Profile_Description.pdf
+    def __init__(self, parent):
+        super(NotificationHandler, self).__init__()
+        self.temperatures = []
+        self.humidities = []
+        self.finished = False  # whether all the logged data was downloaded
+        self.parent = parent
 
-    SYNC_TIME_MS_CHARACTERISTIC_UUID = UUID('0000f235-b38d-4985-720e-0f993a68ee41')
-    OLDEST_TIMESTAMP_MS_CHARACTERISTIC_UUID = UUID('0000f236-b38d-4985-720e-0f993a68ee41')
-    NEWEST_TIMESTAMP_MS_CHARACTERISTIC_UUID = UUID('0000f237-b38d-4985-720e-0f993a68ee41')
-    START_LOGGER_DOWNLOAD_CHARACTERISTIC_UUID = UUID('0000f238-b38d-4985-720e-0f993a68ee41')
-    LOGGER_INTERVAL_MS_CHARACTERISTIC_UUID = UUID('0000f239-b38d-4985-720e-0f993a68ee41')
-    TEMPERATURE_CHARACTERISTIC_UUID = UUID('00002235-b38d-4985-720e-0f993a68ee41')
-    HUMIDITY_CHARACTERISTIC_UUID = UUID('00001235-b38d-4985-720e-0f993a68ee41')
+    def initialize(self):
+        self.temperatures.clear()
+        self.humidities.clear()
+        self.finished = False
 
-    def temperature(self):
-        return self._unpack('<f', self.TEMPERATURE_CHARACTERISTIC_UUID)
+    def handleNotification(self, handle, data):
+        n = (len(data) - 4)//4
+        print('notification', n, len(data), data)
+        if n > 0:
+            values = struct.unpack('<I{}f'.format(n), data)
+            print(values)
+            if handle == self.parent.TEMPERATURE_HANDLE:
+                array = self.temperatures
+            else:
+                array = self.humidities
+            run_number = values[0]
+            for v in values[1:]:
+                array.append([run_number, v])
+                run_number += 1
+        #else:
+        #    self.finished = True
+        #    self.parent.disable_temperature_notifications()
+        #    self.parent.disable_humidity_notifications()
 
-    def humidity(self):
-        return self._unpack('<f', self.HUMIDITY_CHARACTERISTIC_UUID)
 
-    def temperature_humidity(self):
-        return self.temperature(), self.humidity()
-
-    def oldest_timestamp(self):
-        return self._unpack('<Q', self.OLDEST_TIMESTAMP_MS_CHARACTERISTIC_UUID)
-
-    def newest_timestamp(self):
-        return self._unpack('<Q', self.NEWEST_TIMESTAMP_MS_CHARACTERISTIC_UUID)
-
-    def logger_interval(self):
-        return self._unpack('<L', self.LOGGER_INTERVAL_MS_CHARACTERISTIC_UUID)
-
-    def set_logger_interval(self, ms):
-        characteristic = self.getCharacteristics(uuid=self.LOGGER_INTERVAL_MS_CHARACTERISTIC_UUID)[0]
-        characteristic.write(struct.pack('<L', int(ms)))

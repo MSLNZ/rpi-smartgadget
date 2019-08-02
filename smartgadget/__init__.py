@@ -2,6 +2,8 @@ from msl.network import manager, ssh
 
 from .service import SmartGadgetService
 from .client import SmartGadgetClient
+from .sht3x import SHT3X
+from .shtc1 import SHTC1
 
 RPI_EXE_PATH = 'shtenv/bin/smartgadget'
 
@@ -23,8 +25,7 @@ def connect(*, host='raspberrypi', rpi_username='pi', rpi_password=None, timeout
                       ssh_password=rpi_password, timeout=timeout, as_sudo=True, **kwargs)
 
     kwargs['host'] = host
-    c = SmartGadgetClient('SmartGadget', **kwargs)
-    return c
+    return SmartGadgetClient('SmartGadget', **kwargs)
 
 
 def start_service_on_rpi():

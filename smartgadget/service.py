@@ -1,22 +1,39 @@
+"""
+The base :class:`~msl.network.service.Service` class.
+"""
 import subprocess
-from typing import List
+from datetime import datetime
+from typing import List, Tuple
 
 from msl.network import Service
 try:
     from bluepy.btle import Scanner, BTLEDisconnectError
-except ImportError:
-    pass  # not on the Raspberry Pi
-
-from .smart_gadget import SHT3X, SHTC1
+except ImportError:  # then not on the Raspberry Pi
+    Scanner, BTLEDisconnectError = object, object
 
 
 class SmartGadgetService(Service):
 
-    def __init__(self):
-        super(SmartGadgetService, self).__init__(name='SmartGadget')
+    def __init__(self, cls):
+        super(SmartGadgetService, self).__init__(name=cls.DEVICE_NAME)
+        self.DEVICE_NAME = cls.DEVICE_NAME
+        self.CLS = cls
+        self._retries = 5
         self._scanner = Scanner()
         self._gadgets_available = {}
         self._gadgets_connected = {}
+
+    def max_retries(self) -> int:
+        """Returns the maximum number of times to try to connect or read/write data from/to a Smart Gadget.
+
+        Since the Bluetooth connection can drop unexpectedly, this provides the opportunity
+        to re-connect or re-send a request to the Smart Gadget.
+        """
+        return self._retries
+
+    def set_max_retries(self, value: int):
+        """Set the maximum number of times to try to read/write data from/to a Smart Gadget."""
+        self._retries = int(value)
 
     def scan(self, timeout=10, passive=False) -> List[str]:
         """Scan for Smart Gadgets that are within Bluetooth range.
@@ -27,15 +44,12 @@ class SmartGadgetService(Service):
         :rtype: list of str
         """
         self._gadgets_available.clear()
-        for dev in self._scanner.scan(timeout=timeout, passive=passive):
-            name = dev.getValueText(dev.COMPLETE_LOCAL_NAME)
-            if name == SHT3X.NAME:
-                self._gadgets_available[dev.addr] = (SHT3X, dev)
-            elif name == SHTC1.NAME:
-                self._gadgets_available[dev.addr] = (SHTC1, dev)
+        for d in self._scanner.scan(timeout=timeout, passive=passive):
+            if d.getValueText(d.COMPLETE_LOCAL_NAME) == self.DEVICE_NAME:
+                self._gadgets_available[d.addr] = d
         return list(self._gadgets_available)
 
-    def connect_gadget(self, mac_address, strict=True) -> bool:
+    def connect_gadget(self, mac_address: str, strict=True) -> bool:
         """Connect to the specified Smart Gadget.
 
         It is not necessary to call this method to connect to a Smart Gadget via Bluetooth
@@ -61,7 +75,7 @@ class SmartGadgetService(Service):
         failed = self.connect_gadgets([mac_address], strict=strict)[1]
         return len(failed) == 0
 
-    def connect_gadgets(self, mac_addresses, strict=True) -> List[list]:
+    def connect_gadgets(self, mac_addresses, strict=True) -> Tuple[list, list]:
         """Connect to the specified Smart Gadgets.
 
         It is not necessary to call this method to connect to a Smart Gadget via Bluetooth
@@ -83,25 +97,25 @@ class SmartGadgetService(Service):
         :param bool strict: Whether to raise an error if a Smart Gadget could not be connected to.
         :return: A list of MAC addresses of the Smart Gadgets that were successfully connected to
                  and the MAC addresses of the Smart Gadgets that could not be connected to.
-        :rtype: list of list
+        :rtype: tuple of list
         """
         failed_connections = []
         for mac_address in mac_addresses:
             if mac_address in self._gadgets_available:
                 try:
-                    self._gadgets_connected[mac_address] = self._connect(mac_address)
+                    self._gadgets_connected[mac_address] = self._connect(mac_address)[0]
                 except BTLEDisconnectError:
                     if strict:
                         raise
                     else:
                         failed_connections.append(mac_address)
-        return [list(self._gadgets_connected), failed_connections]
+        return list(self._gadgets_connected), failed_connections
 
     def connected_gadgets(self) -> List[str]:
         """A list of MAC addresses of the Smart Gadgets that are currently connected."""
         return list(self._gadgets_connected)
 
-    def disconnect_gadget(self, mac_address):
+    def disconnect_gadget(self, mac_address: str):
         """Disconnect the Smart Gadget with the specified MAC address."""
         gadget = self._gadgets_connected.pop(mac_address, None)
         if gadget:
@@ -119,96 +133,41 @@ class SmartGadgetService(Service):
                 pass
         self._gadgets_connected.clear()
 
-    def temperature(self, mac_address) -> float:
-        """Returns the temperature [deg C] for the specified MAC address."""
-        try:
-            return self._gadgets_connected[mac_address].temperature()
-        except KeyError:
-            with self._connect(mac_address) as sensor:
-                return sensor.temperature()
+    def temperature(self, mac_address: str) -> float:
+        """Returns the temperature [degree C] for the specified MAC address."""
+        return self._process('temperature', mac_address)
 
-    def humidity(self, mac_address) -> float:
+    def humidity(self, mac_address: str) -> float:
         """Returns the humidity [%RH] for the specified MAC address."""
-        try:
-            return self._gadgets_connected[mac_address].humidity()
-        except KeyError:
-            with self._connect(mac_address) as sensor:
-                return sensor.humidity()
+        return self._process('humidity', mac_address)
 
-    def dewpoint(self, mac_address, temperature=None, humidity=None) -> float:
-        """Returns the dew point [deg C] for the specified MAC address."""
-        try:
-            return self._gadgets_connected[mac_address].dewpoint(temperature=temperature, humidity=humidity)
-        except KeyError:
-            with self._connect(mac_address) as sensor:
-                return sensor.dewpoint(temperature=temperature, humidity=humidity)
+    def dewpoint(self, mac_address: str, temperature=None, humidity=None) -> float:
+        """Returns the dew point [degree C] for the specified MAC address."""
+        return self._process('dewpoint', mac_address, temperature=temperature, humidity=humidity)
 
-    def temperature_humidity(self, mac_address) -> List[float]:
-        """Returns the temperature [deg C] and humidity [%RH] for the specified MAC address."""
-        try:
-            return self._gadgets_connected[mac_address].temperature_humidity()
-        except KeyError:
-            with self._connect(mac_address) as sensor:
-                return sensor.temperature_humidity()
+    def temperature_humidity(self, mac_address: str) -> List[float]:
+        """Returns the temperature [degree C] and humidity [%RH] for the specified MAC address."""
+        return self._process('temperature_humidity', mac_address)
 
-    def temperature_humidity_dewpoint(self, mac_address) -> List[float]:
-        """Returns the temperature [deg C] and humidity [%RH] for the specified MAC address."""
-        try:
-            return self._gadgets_connected[mac_address].temperature_humidity_dewpoint()
-        except KeyError:
-            with self._connect(mac_address) as sensor:
-                return sensor.temperature_humidity_dewpoint()
+    def temperature_humidity_dewpoint(self, mac_address: str) -> Tuple[float, float, float]:
+        """Returns the temperature [degree C], humidity [%RH] and dew point [degree C] for the specified MAC address."""
+        return self._process('temperature_humidity_dewpoint', mac_address)
 
-    def battery(self, mac_address) -> int:
+    def battery(self, mac_address: str) -> int:
         """Returns the battery level [%] for the specified MAC address."""
-        try:
-            return self._gadgets_connected[mac_address].battery()
-        except KeyError:
-            with self._connect(mac_address) as sensor:
-                return sensor.battery()
+        return self._process('battery', mac_address)
 
-    def rssi(self, mac_address) -> int:
-        """Received Signal Strength Indication for the last received broadcast from the device.
+    def rssi(self, mac_address: str) -> int:
+        """Returns the Received Signal Strength Indication for the last received broadcast from the device.
 
         This is an integer value measured in dB, where 0 dB is the maximum (theoretical) signal
         strength, and more negative numbers indicate a weaker signal.
         """
-        try:
-            return self._gadgets_connected[mac_address].rssi()
-        except KeyError:
-            with self._connect(mac_address) as sensor:
-                return sensor.rssi()
+        return self._process('rssi', mac_address)
 
-    def info(self, mac_address) -> dict:
-        """Returns a :class:`dict` of all parameters from the Smart Gadget
-        for the specified MAC address.
-
-        .. note::
-
-           Calling this method can take approximately 30 seconds.
-
-        """
-        try:
-            return self._gadgets_connected[mac_address].info()
-        except KeyError:
-            with self._connect(mac_address) as sensor:
-                return sensor.info()
-
-    def logger_interval(self, mac_address) -> int:
-        """Returns the logger interval, in milliseconds. Only valid for a SHT3X sensor."""
-        try:
-            return self._gadgets_connected[mac_address].logger_interval()
-        except KeyError:
-            with self._connect(mac_address) as sensor:
-                return sensor.logger_interval()
-
-    def set_logger_interval(self, mac_address, milliseconds):
-        """Set the logger interval, in milliseconds. Only valid for a SHT3X sensor."""
-        try:
-            return self._gadgets_connected[mac_address].set_logger_interval(milliseconds)
-        except KeyError:
-            with self._connect(mac_address) as sensor:
-                return sensor.set_logger_interval(milliseconds)
+    def info(self, mac_address: str) -> dict:
+        """Returns all available information from the Smart Gadget."""
+        return self._process('info', mac_address)
 
     def disconnect_service(self):
         """Shutdown the SmartGadget Service and the MSL-Network Manager."""
@@ -225,6 +184,51 @@ class SmartGadgetService(Service):
         self.disconnect_gadgets()
         subprocess.call(['sudo', 'systemctl', 'restart', 'bluetooth'])
 
-    def _connect(self, address):
-        cls, scan_entry = self._gadgets_available[address]
-        return cls(scan_entry)
+    @staticmethod
+    def rpi_date() -> str:
+        """Returns the current date of the Raspberry Pi in ISO 8601 format."""
+        return datetime.now().isoformat()
+
+    @staticmethod
+    def set_rpi_date(date: str):
+        """Set the date of the Raspberry Pi.
+
+        The `date` must be in the ISO 8601 format.
+
+        This is useful if the Raspberry Pi does not have internet access on startup
+        to sync with an online NTP server. Does not set the time zone.
+        """
+        iso = datetime.fromisoformat(date)
+        subprocess.run(['sudo', 'date', '-s', iso.strftime('%a %d %b %Y %I:%M:%S %p')], check=True)
+
+    def _connect(self, mac_address, retries_remaining=None):
+        """Connect to the Smart Gadget."""
+        if retries_remaining is None:
+            retries_remaining = int(self._retries)
+        if mac_address in self._gadgets_connected:
+            gadget = self._gadgets_connected[mac_address]
+        else:
+            while True:
+                try:
+                    if mac_address in self._gadgets_available:
+                        # then we'll have the rssi value since we have the bluepy.btle.ScanEntry
+                        gadget = self.CLS(self._gadgets_available[mac_address])
+                    else:
+                        gadget = self.CLS(mac_address)
+                    break
+                except BTLEDisconnectError:
+                    if retries_remaining < 1:
+                        raise
+                    retries_remaining -= 1
+        return gadget, retries_remaining
+
+    def _process(self, method_name, mac_address, **kwargs):
+        retries_remaining = int(self._retries)
+        while True:
+            try:
+                gadget, retries_remaining = self._connect(mac_address, retries_remaining=retries_remaining)
+                return getattr(gadget, method_name)(**kwargs)
+            except BrokenPipeError:
+                if retries_remaining < 1:
+                    raise
+                retries_remaining -= 1
