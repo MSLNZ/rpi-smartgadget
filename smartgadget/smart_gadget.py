@@ -9,6 +9,8 @@ try:
 except ImportError:  # then not on the Raspberry Pi
     Peripheral, DefaultDelegate, UUID = object, object, lambda u: ()
 
+from . import dewpoint
+
 
 class SmartGadget(Peripheral):
 
@@ -61,19 +63,16 @@ class SmartGadget(Peripheral):
     def dewpoint(self, temperature=None, humidity=None) -> float:
         """Returns the dewpoint [degree C].
 
-        If the `temperature` and/or `humidity` value(s) are not specified
-        then they will be read from the Smart Gadget.
+        If the `temperature` or `humidity` value is not specified
+        then it will be read from the Smart Gadget.
         """
         if temperature is None and humidity is None:
             temperature, humidity = self.temperature_humidity()
-        if temperature is None:
+        elif temperature is None:
             temperature = self.temperature()
-        if humidity is None:
+        elif humidity is None:
             humidity = self.humidity()
-
-        # TODO get formula from JLS.
-        #  For now use Equation (1) from https://doi.org/10.1175/BAMS-86-2-225
-        return temperature - (100. - humidity) / 5.
+        return dewpoint(temperature, humidity)
 
     def temperature_humidity_dewpoint(self) -> Tuple[float, float, float]:
         """Returns the temperature [degree C], humidity [%RH] and dew point [degree C]."""
