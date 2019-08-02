@@ -13,13 +13,13 @@ except ImportError:  # then not on the Raspberry Pi
 from .smart_gadget import SmartGadget
 from .service import SmartGadgetService
 
-TEMPERATURE_HUMIDITY_CHARACTERISTIC_UUID = UUID('0000aa21-0000-1000-8000-00805f9b34fb')
-
 
 class SHTC1(SmartGadget):
 
     # This equals the value of DEVICE_NAME_CHARACTERISTIC_UUID
     DEVICE_NAME = 'SHTC1 smart gadget'
+
+    TEMPERATURE_HUMIDITY_CHARACTERISTIC_UUID = UUID('0000aa21-0000-1000-8000-00805f9b34fb')
 
     def temperature(self) -> float:
         """float: Returns the current temperature, in degree C."""
@@ -31,7 +31,7 @@ class SHTC1(SmartGadget):
 
     def temperature_humidity(self) -> Tuple[float, float]:
         """float, float: Returns the current temperature and humidity."""
-        t, h = self._read(TEMPERATURE_HUMIDITY_CHARACTERISTIC_UUID, '<hh')
+        t, h = self._read(self.TEMPERATURE_HUMIDITY_CHARACTERISTIC_UUID, '<hh')
         return t / 100., h / 100.
 
     def battery(self) -> int:
@@ -44,7 +44,7 @@ class SHTC1(SmartGadget):
         t, h = self.temperature_humidity()
         return {
             'battery': self.battery(),
-            'device_name': self.DEVICE_NAME,  # equal to self._read(DEVICE_NAME_HANDLE)
+            'device_name': self.DEVICE_NAME,  # equal to self._read(self.DEVICE_NAME_HANDLE)
             'dewpoint': self.dewpoint(temperature=t, humidity=h),
             'firmware_revision': self._read(self.FIRMWARE_REVISION_STRING_CHARACTERISTIC_UUID),
             'hardware_revision': self._read(self.HARDWARE_REVISION_STRING_CHARACTERISTIC_UUID),
