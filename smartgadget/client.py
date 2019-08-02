@@ -10,7 +10,7 @@ class SmartGadgetClient(LinkedClient):
         :param str service_name: The name of the :class:`~msl.network.service.Service` to link with.
         :param kwargs: Keyword arguments that are passed to :func:`~msl.network.client.connect`.
         """
-        super().__init__(service_name, **kwargs)
+        super(SmartGadgetClient, self).__init__(service_name, **kwargs)
 
     def disconnect(self):
         """
@@ -18,12 +18,11 @@ class SmartGadgetClient(LinkedClient):
         and the Network :class:`~msl.network.manager.Manager`.
         """
         self.disconnect_service()
-        super().disconnect()
+        super(SmartGadgetClient, self).disconnect()
 
     def service_error_handler(self):
         """
-        Shut down the SmartGadget :class:`~msl.network.service.Service`
-        and the Network :class:`~msl.network.manager.Manager` if there was
-        an error.
+        Shut down the SmartGadget :class:`~msl.network.service.Service` and the
+        Network :class:`~msl.network.manager.Manager` if there was an error.
         """
         self.disconnect()
