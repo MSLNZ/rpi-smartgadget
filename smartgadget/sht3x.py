@@ -89,7 +89,7 @@ class SHT3X(SmartGadget):
         t, h = self.temperature_humidity()
         return {
             'battery': self.battery(),
-            'device_name': self.DEVICE_NAME,  # equal to self._read(DEVICE_NAME_HANDLE)
+            'device_name': self.DEVICE_NAME,  # equal to self._read(self.DEVICE_NAME_HANDLE)
             'dewpoint': self.dewpoint(temperature=t, humidity=h),
             'firmware_revision': self._read(self.FIRMWARE_REVISION_STRING_HANDLE),
             'hardware_revision': self._read(self.HARDWARE_REVISION_STRING_HANDLE),
