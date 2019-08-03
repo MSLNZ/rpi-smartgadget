@@ -1,3 +1,4 @@
+import logging
 from math import exp, log10
 
 from msl.network import manager, ssh
@@ -5,6 +6,8 @@ from msl.network import manager, ssh
 # if you change this value then you must also update the name of the
 # virtual environment that is created in rpi-setup.sh
 RPI_EXE_PATH = 'shtenv/bin/smartgadget'
+
+logger = logging.getLogger(__package__)
 
 
 def connect(*, host='raspberrypi', rpi_username='pi', rpi_password=None, timeout=10, **kwargs):
