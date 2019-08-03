@@ -2,6 +2,7 @@
 Base class for a Smart Gadget.
 """
 import struct
+from datetime import datetime
 from typing import Union, Tuple
 
 try:
@@ -39,6 +40,13 @@ class SmartGadget(Peripheral):
         self._rssi = None if isinstance(device, str) else device.rssi
         self.withDelegate(NotificationHandler(self))
         self._characteristics = {}
+
+    def __del__(self):
+        # suppress all errors from Peripheral, for example, a BrokenPipeError
+        try:
+            super(SmartGadget, self).__del__()
+        except:
+            pass
 
     def temperature(self) -> float:
         """Returns the temperature [degree C]"""
@@ -114,7 +122,7 @@ class SmartGadget(Peripheral):
         """Write a value.
 
         :param hnd_or_uuid: A handle (int) or uuid
-        :param fmt: The format to pass to struct.pack()
+        :param str fmt: The format to pass to struct.pack()
         :param value: The value to write
         """
         data = struct.pack(fmt, value)
@@ -133,33 +141,79 @@ class NotificationHandler(DefaultDelegate):
 
     def __init__(self, parent):
         super(NotificationHandler, self).__init__()
+        self.parent = parent
+        self.initialize(-1, 0, 0, True, True)
+        self.run_number_offset = 1  # the manual says it starts at 0 but it actually starts at 1 (for firmware v1.3)
+        self.max_run_number_repeats = 5
+
+    def initialize(self, logger_interval, oldest_timestamp, newest_timestamp, enable_temperature, enable_humidity):
         self.temperatures = []
         self.humidities = []
+        self.temperatures_finished = not enable_temperature
+        self.humidities_finished = not enable_humidity
         self.finished = False  # whether all the logged data was downloaded
-        self.parent = parent
-
-    def initialize(self):
-        self.temperatures.clear()
-        self.humidities.clear()
-        self.finished = False
+        self.logger_interval = logger_interval * 1e-3
+        self.oldest_timestamp = oldest_timestamp * 1e-3
+        self.newest_timestamp = newest_timestamp * 1e-3
+        self.previous_temperature_run_number = -1
+        self.previous_humidity_run_number = -1
+        self.temperature_run_number_repeats = 0  # the number of times the run number did not change
+        self.humidity_run_number_repeats = 0  # the number of times the run number did not change
 
     def handleNotification(self, handle, data):
         n = (len(data) - 4)//4
-        print('notification', n, len(data), data)
-        if n > 0:
+        if n > 0:  # notification for logged data
             values = struct.unpack('<I{}f'.format(n), data)
-            print(values)
+
+            # avoid multiple attribute lookups in the loop
+            fromtimestamp = datetime.fromtimestamp
+            newest_timestamp = self.newest_timestamp
+            logger_interval = self.logger_interval
             if handle == self.parent.TEMPERATURE_HANDLE:
-                array = self.temperatures
+                append = self.temperatures.append
+            elif handle == self.parent.HUMIDITY_HANDLE:
+                append = self.humidities.append
             else:
-                array = self.humidities
-            run_number = values[0]
+                raise ValueError('Unhandled notification from handle={}'.format(handle))
+
+            run_number = values[0] - self.run_number_offset
             for v in values[1:]:
-                array.append([run_number, v])
+                # converting to an ISO timestamp is typically faster than the time it takes to
+                # receive the next notification so this conversion doesn't really slow things down
+                append([run_number, str(fromtimestamp(newest_timestamp - run_number * logger_interval)), v])
                 run_number += 1
-        #else:
-        #    self.finished = True
-        #    self.parent.disable_temperature_notifications()
-        #    self.parent.disable_humidity_notifications()
 
+        else:
+            # notification for a single temperature or humidity value
+            # its possible that a single value is intermittent with the logged notification
+            # therefore we must introduce checks to decide if downloading the logged data has finished
+            if handle == self.parent.TEMPERATURE_HANDLE:
+                if self.temperatures:  # check if all logged data was downloaded
+                    run_number = self.temperatures[-1][0] + self.run_number_offset
+                    last_timestamp = self.newest_timestamp - run_number * self.logger_interval
+                    if last_timestamp <= self.oldest_timestamp or \
+                            self.temperature_run_number_repeats > self.max_run_number_repeats:
+                        self.temperatures_finished = True
+                        self.parent.disable_temperature_notifications()
+                    if self.previous_temperature_run_number == run_number:
+                        self.temperature_run_number_repeats += 1
+                    else:
+                        self.temperature_run_number_repeats = 0
+                    self.previous_temperature_run_number = run_number
+            elif handle == self.parent.HUMIDITY_HANDLE:
+                if self.humidities:  # check if all logged data was downloaded
+                    run_number = self.humidities[-1][0] + self.run_number_offset
+                    last_timestamp = self.newest_timestamp - run_number * self.logger_interval
+                    if last_timestamp <= self.oldest_timestamp or \
+                            self.humidity_run_number_repeats > self.max_run_number_repeats:
+                        self.humidities_finished = True
+                        self.parent.disable_humidity_notifications()
+                    if self.previous_humidity_run_number == run_number:
+                        self.humidity_run_number_repeats += 1
+                    else:
+                        self.humidity_run_number_repeats = 0
+                    self.previous_humidity_run_number = run_number
+            else:
+                raise ValueError('Unhandled notification from handle={}'.format(handle))
 
+            self.finished = self.temperatures_finished and self.humidities_finished

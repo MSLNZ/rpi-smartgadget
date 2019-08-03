@@ -2,6 +2,7 @@
 The SHT3X series Smart Gadget from Sensirion.
 """
 import time
+import heapq
 from typing import Tuple, List
 
 try:
@@ -9,6 +10,7 @@ try:
 except ImportError:  # then not on the Raspberry Pi
     Peripheral, UUID = object, lambda u: ()
 
+from . import logger
 from .smart_gadget import SmartGadget
 from .service import SmartGadgetService
 
@@ -166,26 +168,108 @@ class SHT3X(SmartGadget):
         data = round(time.time() * 1000) if milliseconds is None else int(milliseconds)
         self._write(self.SYNC_TIME_MS_HANDLE, '<Q', data)
 
-    def fetch_logged_data(self, sync_ms=None, oldest_ms=None, newest_ms=None) -> Tuple[List[float], List[float]]:
-        """Returns the logged temperature and humidity values."""
-        self.enable_temperature_notifications()
-        self.enable_humidity_notifications()
+    def fetch_logged_data(self, enable_temperature=True, enable_humidity=True, num_iterations=1,
+                          sync_ms=None, oldest_ms=None, newest_ms=None) -> Tuple[List[float], List[float]]:
+        """Returns the logged temperature and humidity values.
+
+        :param bool enable_temperature: Whether to download the temperature values.
+        :param bool enable_humidity: Whether to download the humidity values.
+        :param int num_iterations: Bluetooth does not guarantee that all data packets are
+                                   received by default, its connection principles are equivalent
+                                   to the same ones as UDP for computer networks. You can specify
+                                   the number of times to download the data to fix missing packets.
+        :param int sync_ms: Passed to :meth:`.set_sync_time`.
+        :param int oldest_ms: Passed to :meth:`.set_oldest_timestamp`.
+        :param int newest_ms: Passed to :meth:`.set_newest_timestamp`.
+        :return: The logged temperature and/or humidity data. The data is returned as a N x 3 list:
+                 the 1st column is a run number, the 2nd column is the timestamp, and the 3rd
+                 column is the value.
+        """
+        if not enable_temperature and not enable_humidity:
+            logger.debug('Chose not to fetch the temperature nor the humidity values')
+            return [], []
+
+        if enable_temperature:
+            self.enable_temperature_notifications()
+        if enable_humidity:
+            self.enable_humidity_notifications()
         self.set_sync_time(sync_ms)
         self.set_oldest_timestamp(oldest_ms)
         if newest_ms is not None:
             self.set_newest_timestamp(newest_ms)
-        self.delegate.initialize()
-        self._write(self.START_LOGGER_DOWNLOAD_HANDLE, '<B', 1)
-        while True:
-            self.waitForNotifications(1)
-            if self.delegate.finished:
+
+        # wait for the values of the oldest and newest timestamps to be updated
+        oldest, newest = 0, 0
+        while oldest == 0 or newest == 0:
+            oldest, newest = self.oldest_timestamp(), self.newest_timestamp()
+        if newest == oldest:
+            logger.warning('newest timestamp {} == oldest timestamp {}'.format(newest, oldest))
+            return [], []
+
+        interval = self.logger_interval()
+        num_expected = (newest - oldest) // interval
+        temperatures, humidities = [], []
+        for iteration in range(num_iterations):
+            self.delegate.initialize(interval, oldest, newest, enable_temperature, enable_humidity)
+            self._write(self.START_LOGGER_DOWNLOAD_HANDLE, '<B', 1)
+            while True:
+                self.waitForNotifications(1)
+                if self.delegate.finished:
+                    break
+            self._write(self.START_LOGGER_DOWNLOAD_HANDLE, '<B', 0)
+
+            if enable_temperature:
+                logger.debug('Iteration {} -- Fetched {} of {} temperature values'
+                             .format(iteration+1, len(self.delegate.temperatures), num_expected))
+            if enable_humidity:
+                logger.debug('Iteration {} -- Fetched {} of {} humidity values'
+                             .format(iteration+1, len(self.delegate.humidities), num_expected))
+
+            if num_iterations == 1:
+                if enable_temperature:
+                    temperatures = self.delegate.temperatures
+                if enable_humidity:
+                    humidities = self.delegate.humidities
+            else:
+                def merge_no_duplicates(*iterables):
+                    last = object()
+                    for val in heapq.merge(*iterables):
+                        if val != last:
+                            last = val
+                            yield val
+
+                # merge the previous and current downloads
+                if enable_temperature:
+                    temperatures = list(merge_no_duplicates(temperatures, self.delegate.temperatures))
+                if enable_humidity:
+                    humidities = list(merge_no_duplicates(humidities, self.delegate.humidities))
+
+            # have we downloaded all the data?
+            if (enable_temperature and len(temperatures) == num_expected) and \
+                    (enable_humidity and len(humidities) == num_expected):
                 break
-        return self.delegate.temperatures, self.delegate.humidities
+            if not enable_temperature and (enable_humidity and len(humidities) == num_expected):
+                break
+            if not enable_humidity and (enable_temperature and len(temperatures) == num_expected):
+                break
+
+            if enable_temperature:
+                self.enable_temperature_notifications()
+            if enable_humidity:
+                self.enable_humidity_notifications()
+
+        if enable_temperature:
+            logger.debug('Finished -- Fetched {} of {} temperature values'.format(len(temperatures), num_expected))
+        if enable_humidity:
+            logger.debug('Finished -- Fetched {} of {} humidity values'.format(len(humidities), num_expected))
+
+        return temperatures, humidities
 
 
 class SHT3XService(SmartGadgetService):
 
     def __init__(self):
+        """The :class:`~msl.network.service.Service` for a :class:`SHT3X` Smart Gadget."""
         super(SHT3XService, self).__init__(SHT3X)
 
     def oldest_timestamp(self, mac_address: str) -> int:
@@ -246,8 +330,24 @@ class SHT3XService(SmartGadgetService):
         """
         self._process('set_sync_time', mac_address, milliseconds=milliseconds)
 
-    def fetch_logged_data(self, mac_address: str, sync_ms=None,
-                          oldest_ms=None, newest_ms=None) -> Tuple[List[float], List[float]]:
-        """Returns the logged temperature and humidity values."""
-        return self._process('fetch_logged_data', mac_address, sync_ms=sync_ms,
+    def fetch_logged_data(self, mac_address: str, enable_temperature=True, enable_humidity=True, num_iterations=1,
+                          sync_ms=None, oldest_ms=None, newest_ms=None) -> Tuple[List[float], List[float]]:
+        """Returns the logged temperature and humidity values.
+
+        :param bool enable_temperature: Whether to download the temperature values.
+        :param bool enable_humidity: Whether to download the humidity values.
+        :param int num_iterations: Bluetooth does not guarantee that all data packets are
+                                   received by default, its connection principles are equivalent
+                                   to the same ones as UDP for computer networks. You can specify
+                                   the number of times to download the data to fix missing packets.
+        :param int sync_ms: Passed to :meth:`.set_sync_time`.
+        :param int oldest_ms: Passed to :meth:`.set_oldest_timestamp`.
+        :param int newest_ms: Passed to :meth:`.set_newest_timestamp`.
+        :return: The logged temperature and/or humidity data. The data is returned as a N x 3 list:
+                 the 1st column is a run number, the 2nd column is the timestamp, and the 3rd
+                 column is the value.
+        """
+        return self._process('fetch_logged_data', mac_address,
+                             enable_temperature=enable_temperature, enable_humidity=enable_humidity,
+                             num_iterations=num_iterations, sync_ms=sync_ms,
                              oldest_ms=oldest_ms, newest_ms=newest_ms)
