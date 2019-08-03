@@ -2,7 +2,7 @@
 The SHTC1 series Smart Gadget from Sensirion.
 
 Don't have a SHTC1 device to test this class.
-If/when we do then we could provide this as a MSL-Network Service as well.
+When we do, we could provide this as a MSL-Network Service as well.
 """
 from typing import Tuple
 try:
@@ -62,4 +62,5 @@ class SHTC1(SmartGadget):
 class SHTC1Service(SmartGadgetService):
 
     def __init__(self):
+        """The :class:`~msl.network.service.Service` for a :class:`SHTC1` Smart Gadget."""
         super(SHTC1Service, self).__init__(SHTC1)
