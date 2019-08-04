@@ -1,6 +1,5 @@
 import re
 import sys
-import platform
 from setuptools import setup
 from distutils.cmd import Command
 
@@ -8,7 +7,7 @@ if sys.version_info[:2] < (3, 5):
     sys.exit('Python < 3.5 is not supported because the asyncio package is required')
 
 install_requires = ['msl-network>=0.4']
-if platform.machine().startswith('arm') or sys.platform.startswith('linux'):
+if sys.platform.startswith('linux'):
     install_requires.append('bluepy')
 
 
@@ -95,9 +94,6 @@ def fetch_init(key):
     return re.compile(r'{}\s*=\s*(.*)'.format(key)).search(init_text).group(1)[1:-1]
 
 
-testing = {'test', 'tests', 'pytest'}.intersection(sys.argv)
-pytest_runner = ['pytest-runner'] if testing else []
-
 needs_sphinx = {'doc', 'docs', 'apidoc', 'apidocs', 'build_sphinx'}.intersection(sys.argv)
 sphinx = ['sphinx', 'sphinx_rtd_theme'] if needs_sphinx else []
 
@@ -125,8 +121,7 @@ setup(
         'Topic :: Software Development',
         'Topic :: Scientific/Engineering',
     ],
-    setup_requires=sphinx + pytest_runner + install_requires,
-    tests_require=['pytest-cov', 'pytest'],
+    setup_requires=sphinx + install_requires,
     install_requires=install_requires,
     cmdclass={'docs': BuildDocs, 'apidocs': ApiDocs},
     packages=['smartgadget'],
