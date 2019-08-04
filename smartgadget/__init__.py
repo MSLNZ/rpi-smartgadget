@@ -183,6 +183,22 @@ def timestamp_to_milliseconds(obj):
     return round(obj.timestamp() * 1e3)
 
 
+def milliseconds_to_datetime(milliseconds):
+    """Convert a timestamp in milliseconds to a :class:`~datetime.datetime`.
+
+    Parameters
+    ----------
+    milliseconds : :class:`int`
+        A timestamp in milliseconds.
+
+    Returns
+    -------
+    :class:`~datetime.datetime`
+        The `milliseconds` converted to a :class:`~datetime.datetime` object.
+    """
+    return datetime.fromtimestamp(milliseconds * 1e-3)
+
+
 from .client import SmartGadgetClient
 from .sht3x import SHT3XService
 from .shtc1 import SHTC1Service
