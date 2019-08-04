@@ -2,6 +2,8 @@
 RPi-SmartGadget
 ===============
 
+|docs|
+
 Communicate with a Sensirion SHTxx Smart Gadget.
 
 A Raspberry Pi is used for the Bluetooth Low Energy connectivity and the MSL-Network_ package
@@ -15,5 +17,10 @@ Documentation
 
 The documentation for **RPi-SmartGadget** can be found here_.
 
-.. _MSL-Network: https://msl-network.readthedocs.io/en/stable/index.html
-.. _here: https://rpi-smartgadget.readthedocs.io/en/stable/index.html
+.. |docs| image:: https://readthedocs.org/projects/rpi-smartgadget/badge/?version=latest
+   :target: https://rpi-smartgadget.readthedocs.io/en/latest/
+   :alt: Documentation Status
+   :scale: 100%
+
+.. _MSL-Network: https://msl-network.readthedocs.io/en/stable/
+.. _here: https://rpi-smartgadget.readthedocs.io/en/latest/
