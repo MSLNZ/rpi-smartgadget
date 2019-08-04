@@ -8,7 +8,7 @@ from typing import Union, Tuple
 try:
     from bluepy.btle import Peripheral, DefaultDelegate, UUID
 except ImportError:  # then not on the Raspberry Pi
-    Peripheral, DefaultDelegate, UUID = object, object, lambda u: ()
+    Peripheral, DefaultDelegate, UUID = object, object, lambda u: u
 
 from . import dewpoint
 
@@ -31,10 +31,15 @@ class SmartGadget(Peripheral):
     MANUFACTURER_NAME_STRING_CHARACTERISTIC_UUID = UUID(0x2a29)
 
     def __init__(self, device, interface=None):
-        """
-        :param device: A MAC address as a :class:`str` or a :class:`~bluepy.btle.ScanEntry` object.
-        :param int interface: The Bluetooth interface to use for the connection.
-                              For example, 0 or None means ``/dev/hci0``, 1 means ``/dev/hci1``
+        """Base class for a Smart Gadget.
+
+        Parameters
+        ----------
+        device
+            A MAC address as a :class:`str` or a :ref:`ScanEntry <scanentry>` object.
+        interface : :class:`int`, optional
+            The Bluetooth interface to use for the connection. For example, 0 or :data:`None`
+            means ``/dev/hci0``, 1 means ``/dev/hci1``.
         """
         super(SmartGadget, self).__init__(deviceAddr=device, addrType='random', iface=interface)
         self._rssi = None if isinstance(device, str) else device.rssi
@@ -49,30 +54,61 @@ class SmartGadget(Peripheral):
             pass
 
     def temperature(self) -> float:
-        """Returns the temperature [degree C]"""
+        """Returns the temperature [degree C].
+
+        .. attention::
+           The subclass must override this method.
+        """
         raise NotImplementedError
 
     def humidity(self) -> float:
-        """Returns the humidity [%RH]"""
+        """Returns the temperature [degree C].
+
+        .. attention::
+           The subclass must override this method.
+        """
         raise NotImplementedError
 
     def temperature_humidity(self) -> Tuple[float, float]:
-        """Returns the temperature [degree C] and humidity [%RH]"""
+        """Returns the temperature [degree C].
+
+        .. attention::
+           The subclass must override this method.
+        """
         raise NotImplementedError
 
     def battery(self) -> int:
-        """Returns the battery level [%]"""
+        """Returns the temperature [degree C].
+
+        .. attention::
+           The subclass must override this method.
+        """
         raise NotImplementedError
 
     def info(self) -> dict:
-        """Returns all available information from the Smart Gadget."""
+        """Returns the temperature [degree C].
+
+        .. attention::
+           The subclass must override this method.
+        """
         raise NotImplementedError
 
     def dewpoint(self, temperature=None, humidity=None) -> float:
-        """Returns the dewpoint [degree C].
+        """Returns the dew point for the specified MAC address.
 
-        If the `temperature` or `humidity` value is not specified
-        then it will be read from the Smart Gadget.
+        Parameters
+        ----------
+        temperature : :class:`float`, optional
+            The temperature [degree C]. If :data:`None` then reads the current
+            temperature value from the Smart Gadget.
+        humidity : :class:`float`, optional
+            The humidity [%RH]. If :data:`None` then reads the current
+            humidity value from the Smart Gadget.
+
+        Returns
+        -------
+        :class:`float`
+            The dew point [degree C].
         """
         if temperature is None and humidity is None:
             temperature, humidity = self.temperature_humidity()
@@ -83,24 +119,39 @@ class SmartGadget(Peripheral):
         return dewpoint(temperature, humidity)
 
     def temperature_humidity_dewpoint(self) -> Tuple[float, float, float]:
-        """Returns the temperature [degree C], humidity [%RH] and dew point [degree C]."""
+        """Returns the current temperature, humidity and dew point.
+
+        Returns
+        -------
+        :class:`float`
+            The temperature [degree C].
+        :class:`float`
+            The humidity [%RH].
+        :class:`float`
+            The dew point [degree C].
+        """
         t, h = self.temperature_humidity()
         return t, h, self.dewpoint(temperature=t, humidity=h)
 
     def rssi(self) -> Union[int, None]:
-        """Returns the Received Signal Strength Indication for the last received broadcast from the device.
+        """Returns the Received Signal Strength Indication (RSSI) for the last received broadcast from the device.
 
-        Only valid if the :class:`SmartGadget` was initialized with a :class:`~bluepy.btle.ScanEntry`
-        object, otherwise returns :data:`None`.
+        This is an integer value measured in dB, where 0 dB is the maximum (theoretical) signal
+        strength, and more negative numbers indicate a weaker signal.
+
+        Returns
+        -------
+        :class:`int` or :data:`None`
+            The RSSI value if the :class:`.SmartGadget` was initialized with a
+            :ref:`ScanEntry <scanentry>` object. Otherwise returns :data:`None`.
         """
         return self._rssi
 
     def _read(self, hnd_or_uuid, fmt=None):
         """Read data.
 
-        :param hnd_or_uuid: A handle (int) or uuid
-        :param fmt: The format to pass to struct.unpack(), if None then assumes an ASCII string.
-        :return: The data.
+        hnd_or_uuid: A handle (int) or uuid (str)
+        fmt (str): The format to pass to struct.unpack(), if None then assumes an ASCII string.
         """
         if isinstance(hnd_or_uuid, int):  # handle
             data = self.readCharacteristic(hnd_or_uuid)
@@ -121,9 +172,9 @@ class SmartGadget(Peripheral):
     def _write(self, hnd_or_uuid, fmt, value, with_response=False):
         """Write a value.
 
-        :param hnd_or_uuid: A handle (int) or uuid
-        :param str fmt: The format to pass to struct.pack()
-        :param value: The value to write
+        hnd_or_uuid: A handle (int) or uuid (str)
+        fmt (str): The format to pass to struct.pack()
+        value: The value to write
         """
         data = struct.pack(fmt, value)
         if isinstance(hnd_or_uuid, int):  # handle
@@ -140,6 +191,10 @@ class SmartGadget(Peripheral):
 class NotificationHandler(DefaultDelegate):
 
     def __init__(self, parent):
+        """Handles notifications from the Smart Gadget.
+
+        Not to be instantiated directly.
+        """
         super(NotificationHandler, self).__init__()
         self.parent = parent
         self.initialize(-1, 0, 0, True, True)
@@ -147,6 +202,7 @@ class NotificationHandler(DefaultDelegate):
         self.max_run_number_repeats = 5
 
     def initialize(self, logger_interval, oldest_timestamp, newest_timestamp, enable_temperature, enable_humidity):
+        """Automatically called before getting the notifications to initialize all parameters."""
         self.temperatures = []
         self.humidities = []
         self.temperatures_finished = not enable_temperature
@@ -161,6 +217,15 @@ class NotificationHandler(DefaultDelegate):
         self.humidity_run_number_repeats = 0  # the number of times the run number did not change
 
     def handleNotification(self, handle, data):
+        """Received a notification.
+
+        Parameters
+        ----------
+        handle : :class:`int`
+            The handle that sent the notification.
+        data : :class:`bytes`
+            The data.
+        """
         n = (len(data) - 4)//4
         if n > 0:  # notification for logged data
             values = struct.unpack('<I{}f'.format(n), data)

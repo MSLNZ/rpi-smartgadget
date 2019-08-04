@@ -5,17 +5,6 @@ with Bluetooth devices on Linux.
 At the time (2019-04-14) of writing this script the latest version of BlueZ
 was 5.50 and therefore this is the default version when running the
 ``bluez-update`` console script (see setup.py).
-
-Usage
------
-To install the default version of BlueZ (5.50) run
-
-bluez-update
-
-To install a specific version of BlueZ run
-
-bluez-update 4.44
-
 """
 import os
 import sys
@@ -53,6 +42,13 @@ rm bluez-{version}.tar.xz
 
 
 def run():
+    """Run the updater.
+
+    Meant to be invoked via the ``bluez-update`` command on the terminal.
+
+    See :ref:`rpi-smartgadget-update-bluez` for more details.
+    """
+
     # latest version of BlueZ is 5.50 as of 2019-04-14
     version = sys.argv[-1] if len(sys.argv) > 1 else '5.50'
 
