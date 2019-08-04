@@ -16,13 +16,13 @@ installed packages on the Raspberry Pi
 
 The following will install the **RPi-SmartGadget** package in a `virtual environment`_
 in the ``/home/pi/shtenv`` directory on the Raspberry Pi *(the* ``shtenv`` *directory*
-*will automatically be created)*.
+*will be automatically created)*
 
 .. code-block:: console
 
    git clone https://github.com/MSLNZ/rpi-smartgadget.git
    bash rpi-smartgadget/rpi-setup.sh
-   rm -rf rpi-smartgadget/
+   rm -rf rpi-smartgadget
 
 To install **RPi-SmartGadget** on a computer that is not a Raspberry Pi run
 
@@ -30,7 +30,7 @@ To install **RPi-SmartGadget** on a computer that is not a Raspberry Pi run
 
    pip install https://github.com/MSLNZ/rpi-smartgadget/archive/master.tar.gz
 
-Alternatively, using the :ref:`msl-package-manager-welcome` run:
+Alternatively, using the :ref:`msl-package-manager-welcome` run
 
 .. code-block:: console
 
