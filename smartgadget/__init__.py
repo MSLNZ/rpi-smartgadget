@@ -1,7 +1,15 @@
+"""
+Communicate with a Sensirion SHTxx Smart Gadget.
+"""
 import logging
 from math import exp, log10
+from datetime import datetime
 
 from msl.network import manager, ssh
+
+__author__ = 'Joseph Borbely'
+__copyright__ = '\xa9 2019, ' + __author__
+__version__ = '0.1.0.dev0'
 
 # if you change this value then you must also update the name of the
 # virtual environment that is created in rpi-setup.sh
@@ -13,14 +21,23 @@ logger = logging.getLogger(__package__)
 def connect(*, host='raspberrypi', rpi_username='pi', rpi_password=None, timeout=10, **kwargs):
     """Connect to the :class:`~smartgadget.sht3x.SHT3XService` on the Raspberry Pi.
 
-    :param str host: The hostname or IP address of the Raspberry Pi.
-    :param str rpi_username: The username for the Raspberry Pi.
-    :param str rpi_password: The password for `rpi_username`.
-    :param float timeout: The maximum number of seconds to wait for the connection.
-    :param kwargs: Keyword arguments that are passed to :func:`~msl.network.manager.run_services`.
+    Parameters
+    ----------
+    host : :class:`str`, optional
+        The hostname or IP address of the Raspberry Pi.
+    rpi_username : :class:`str`, optional
+        The username for the Raspberry Pi.
+    rpi_password : :class:`str`, optional
+        The password for `rpi_username`.
+    timeout : :class:`float`, optional
+        The maximum number of seconds to wait for the connection.
+    kwargs
+        Keyword arguments that are passed to :func:`~msl.network.manager.run_services`.
 
-    :return: A connection to the :class:`~smartgadget.sht3x.SHT3XService` on the Raspberry Pi.
-    :rtype: :class:`~smartgadget.client.SmartGadgetClient`
+    Returns
+    -------
+    :class:`~smartgadget.client.SmartGadgetClient`
+        A connection to the :class:`~smartgadget.sht3x.SHT3XService` on the Raspberry Pi.
     """
     console_script_path = '/home/{}/{}'.format(rpi_username, RPI_EXE_PATH)
     ssh.start_manager(host, console_script_path, ssh_username=rpi_username,
@@ -41,17 +58,25 @@ def start_service_on_rpi():
             'The Manager is using a login for authentication but the SmartGadgetService '
             'does not know the username and password to use to connect to the Manager'
         )
-    manager.run_services(SHT3XService(), **kwargs)
+    interface = kwargs.pop('interface', None)
+    manager.run_services(SHT3XService(interface=interface), **kwargs)
 
 
 def kill_manager(*, host='raspberrypi', rpi_username='pi', rpi_password=None, timeout=10, **kwargs):
     """Kill the Network :class:`~msl.network.manager.Manager` on the Raspberry Pi.
 
-    :param str host: The hostname or IP address of the Raspberry Pi.
-    :param str rpi_username: The username for the Raspberry Pi.
-    :param str rpi_password: The password for `rpi_username`.
-    :param float timeout: The maximum number of seconds to wait for the connection.
-    :param kwargs: Keyword arguments that are passed to :meth:`~paramiko.client.SSHClient.connect`.
+    Parameters
+    ----------
+    host : :class:`str`, optional
+        The hostname or IP address of the Raspberry Pi.
+    rpi_username : :class:`str`, optional
+        The username for the Raspberry Pi.
+    rpi_password : :class:`str`, optional
+        The password for `rpi_username`.
+    timeout : :class:`float`, optional
+        The maximum number of seconds to wait for the connection.
+    kwargs
+        Keyword arguments that are passed to :meth:`~paramiko.client.SSHClient.connect`.
     """
     ssh_client = ssh.connect(host, username=rpi_username, password=rpi_password, timeout=timeout, **kwargs)
     lines = ssh.exec_command(ssh_client, 'ps aux | grep smartgadget')
@@ -70,10 +95,17 @@ def kill_manager(*, host='raspberrypi', rpi_username='pi', rpi_password=None, ti
 def dewpoint(temperature, humidity):
     """Calculate the dew point.
 
-    :param float temperature: The temperature [degree C].
-    :param float humidity: The humidity [%RH].
-    :return: The dew point [degree C].
-    :rtype: float
+    Parameters
+    ----------
+    temperature : :class:`float`
+        The temperature [degree C].
+    humidity : :class:`float`
+        The humidity [%RH].
+
+    Returns
+    -------
+    :class:`float`
+        The dew point [degree C].
     """
     # TODO get formula from JLS.
     #  For now use Equation 7 from
@@ -117,5 +149,40 @@ def dewpoint(temperature, humidity):
     return Tn / (m / log10(Pw / A) - 1.0)
 
 
+def timestamp_to_milliseconds(obj):
+    """Convert an object into a timestamp in milliseconds.
+
+    Parameters
+    ----------
+    obj
+        A :class:`~datetime.datetime` object, an ISO-8601 formatted :class:`str`,
+        a :class:`float` in seconds, or an :class:`int` in milliseconds. If
+        :data:`None` then returns 0.
+
+    Returns
+    -------
+    :class:`int`
+        The timestamp in milliseconds.
+    """
+    if obj is None:
+        return 0
+
+    if isinstance(obj, int):  # in milliseconds
+        return obj
+
+    if isinstance(obj, float):  # in seconds
+        return round(obj * 1e3)
+
+    if isinstance(obj, str):  # an ISO-8601 string
+        string = obj.replace('T', ' ')
+        fmt = '%Y-%m-%d %H:%M:%S'
+        if '.' in string:
+            fmt += '.%f'
+        obj = datetime.strptime(string, fmt)
+
+    return round(obj.timestamp() * 1e3)
+
+
 from .client import SmartGadgetClient
 from .sht3x import SHT3XService
+from .shtc1 import SHTC1Service
