@@ -148,7 +148,7 @@ class SHT3X(SmartGadget):
         Returns
         -------
         :class:`int`
-            The oldest timestamp [milliseconds].
+            The oldest timestamp [milliseconds].  See also :func:`~smartgadget.milliseconds_to_datetime`.
         """
         return self._read(self.OLDEST_TIMESTAMP_MS_HANDLE, '<Q')
 
@@ -169,7 +169,7 @@ class SHT3X(SmartGadget):
         Returns
         -------
         :class:`int`
-            The newest timestamp [milliseconds].
+            The newest timestamp [milliseconds]. See also :func:`~smartgadget.milliseconds_to_datetime`.
         """
         return self._read(self.NEWEST_TIMESTAMP_MS_HANDLE, '<Q')
 
@@ -190,7 +190,7 @@ class SHT3X(SmartGadget):
         Returns
         -------
         :class:`int`
-            The interval [milliseconds]
+            The time between log events [milliseconds].
         """
         return self._read(self.LOGGER_INTERVAL_MS_HANDLE, '<L')
 
@@ -199,12 +199,12 @@ class SHT3X(SmartGadget):
 
         .. attention::
 
-           This will reset all values that are currently saved in memory.
+           This will clear all values that are currently saved in memory.
 
-        Returns
-        -------
-        :class:`int`
-            The interval [milliseconds].
+        Parameters
+        ----------
+        milliseconds : :class:`int`
+            The time between log events [milliseconds].
         """
         self._write(self.LOGGER_INTERVAL_MS_HANDLE, '<L', int(milliseconds))
 
@@ -265,16 +265,16 @@ class SHT3X(SmartGadget):
         """Returns the logged temperature and humidity values.
 
         The maximum number of temperature values that can be logged is 15872 and
-        the maximum number of humidity values that can be logged is also 15872.
+        the maximum number of humidity values that can be logged is 15872.
 
         It can take approximately 1 minute to perform 1 iteration of the
         download if the Smart Gadget memory is full and you are requesting all data.
 
         The data is returned as an N x 3 :class:`list`:
 
-        * the first column is the run number (as documented in the manual)
-        * the second column is the timestamp (in ISO-8601 format)
-        * the third column is the value
+        * the first column is the run number (as documented in the manual) :math:`\\rightarrow` :class:`int`
+        * the second column is the timestamp (in ISO-8601 format) :math:`\\rightarrow` :class:`str`
+        * the third column is the value :math:`\\rightarrow` :class:`float`
 
         Parameters
         ----------
@@ -295,9 +295,9 @@ class SHT3X(SmartGadget):
 
         Returns
         -------
-        :class:`list` of :class:`float`
+        :class:`list` of :class:`list`
             The logged temperature values [degree C].
-        :class:`list` of :class:`float`
+        :class:`list` of :class:`list`
             The logged humidity values [%RH].
         """
         if not enable_temperature and not enable_humidity:
@@ -401,7 +401,7 @@ class SHT3XService(SmartGadgetService):
         Returns
         -------
         :class:`int`
-            The oldest timestamp [milliseconds].
+            The oldest timestamp [milliseconds]. See also :func:`~smartgadget.milliseconds_to_datetime`.
         """
         return self._process('oldest_timestamp', mac_address)
 
@@ -429,7 +429,7 @@ class SHT3XService(SmartGadgetService):
         Returns
         -------
         :class:`int`
-            The newest timestamp [milliseconds].
+            The newest timestamp [milliseconds]. See also :func:`~smartgadget.milliseconds_to_datetime`.
         """
         return self._process('newest_timestamp', mac_address)
 
@@ -457,7 +457,7 @@ class SHT3XService(SmartGadgetService):
         Returns
         -------
         :class:`int`
-            The interval [milliseconds]
+            The time between log events [milliseconds].
         """
         return self._process('logger_interval', mac_address)
 
@@ -466,17 +466,14 @@ class SHT3XService(SmartGadgetService):
 
         .. attention::
 
-           This will reset all values that are currently saved in memory.
+           This will clear all values that are currently saved in memory.
 
         Parameters
         ----------
         mac_address : :class:`str`
             The MAC address of the Smart Gadget.
-
-        Returns
-        -------
-        :class:`int`
-            The interval [milliseconds].
+        milliseconds : :class:`int`
+            The time between log events [milliseconds].
         """
         self._process('set_logger_interval', mac_address, milliseconds=milliseconds)
 
@@ -569,16 +566,16 @@ class SHT3XService(SmartGadgetService):
         """Returns the logged temperature and humidity values.
 
         The maximum number of temperature values that can be logged is 15872 and
-        the maximum number of humidity values that can be logged is also 15872.
+        the maximum number of humidity values that can be logged is 15872.
 
         It can take approximately 1 minute to perform 1 iteration of the
         download if the Smart Gadget memory is full and you are requesting all data.
 
         The data is returned as an N x 3 :class:`list`:
 
-        * the first column is the run number (as documented in the manual)
-        * the second column is the timestamp (in ISO-8601 format)
-        * the third column is the value
+        * the first column is the run number (as documented in the manual) :math:`\\rightarrow` :class:`int`
+        * the second column is the timestamp (in ISO-8601 format) :math:`\\rightarrow` :class:`str`
+        * the third column is the value :math:`\\rightarrow` :class:`float`
 
         Parameters
         ----------
@@ -601,9 +598,9 @@ class SHT3XService(SmartGadgetService):
 
         Returns
         -------
-        :class:`list` of :class:`float`
+        :class:`list` of :class:`list`
             The logged temperature values [degree C].
-        :class:`list` of :class:`float`
+        :class:`list` of :class:`list`
             The logged humidity values [%RH].
         """
         return self._process('fetch_logged_data', mac_address,
