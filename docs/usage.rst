@@ -28,7 +28,7 @@ To find out what can be requested from a Smart Gadget, run the following
 
 .. code-block:: pycon
 
-    >>> print(rpi.manager(as_string=True, indent=2))
+    >>> print(rpi.manager(as_string=True))
     Manager[raspberrypi:1875]
       attributes:
         identity() -> dict
@@ -40,7 +40,7 @@ To find out what can be requested from a Smart Gadget, run the following
         language: Python 3.7.3
         os: Windows 10 AMD64
     Services [1]:
-      Smart Humigadget[localhost:36834]
+      Smart Humigadget[raspberrypi:36834]
         attributes:
           battery(mac_address) -> int
           connect_gadget(mac_address, strict=True) -> bool
