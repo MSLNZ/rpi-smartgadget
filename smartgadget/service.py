@@ -11,7 +11,11 @@ try:
 except ImportError:  # then not on the Raspberry Pi
     Scanner, BTLEDisconnectError = object, object
 
-from . import logger, timestamp_to_milliseconds
+from . import (
+    logger,
+    timestamp_to_milliseconds,
+    milliseconds_to_datetime,
+)
 
 
 class SmartGadgetService(Service):
@@ -357,7 +361,7 @@ class SmartGadgetService(Service):
         :class:`str`
             The current date of the Raspberry Pi in the ISO-8601 format.
         """
-        return datetime.now().isoformat()
+        return datetime.now().isoformat(sep=' ')
 
     @staticmethod
     def set_rpi_date(date):
@@ -373,8 +377,7 @@ class SmartGadgetService(Service):
             formatted :class:`str`, a :class:`float` in seconds, or an
             :class:`int` in milliseconds.
         """
-        ms = timestamp_to_milliseconds(date)
-        date = datetime.fromtimestamp(ms * 1e-3)
+        date = milliseconds_to_datetime(timestamp_to_milliseconds(date))
         logger.debug("Setting Raspberry Pi date to '{}'".format(date))
         subprocess.run(['sudo', 'date', '-s', date.strftime('%a %d %b %Y %I:%M:%S %p')], check=True)
 
