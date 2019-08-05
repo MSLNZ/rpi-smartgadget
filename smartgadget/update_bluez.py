@@ -14,13 +14,16 @@ SCRIPT_URL = os.path.join(sys.exec_prefix, 'rpi-smartgadget-bluez-update.sh')
 
 BASH = """#!/bin/bash
 
+# exit on first error
+set -e
+
 # install the prerequisites to update BlueZ
 sudo apt update
 sudo apt install libusb-dev libdbus-1-dev libglib2.0-dev libudev-dev libical-dev libreadline-dev libdbus-glib-1-dev -y
 
 # update BlueZ
 sudo systemctl stop bluetooth
-wget http://www.kernel.org/pub/linux/bluetooth/bluez-{version}.tar.xz
+wget https://www.kernel.org/pub/linux/bluetooth/bluez-{version}.tar.xz
 tar xf bluez-{version}.tar.xz
 cd bluez-{version}
 ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var --enable-library
