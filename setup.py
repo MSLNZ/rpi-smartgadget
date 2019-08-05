@@ -121,7 +121,7 @@ setup(
         'Topic :: Software Development',
         'Topic :: Scientific/Engineering',
     ],
-    setup_requires=sphinx + install_requires,
+    setup_requires=sphinx,
     install_requires=install_requires,
     cmdclass={'docs': BuildDocs, 'apidocs': ApiDocs},
     packages=['smartgadget'],
