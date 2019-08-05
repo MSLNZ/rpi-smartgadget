@@ -24,3 +24,9 @@ set_logger_interval.py
 
 .. literalinclude:: ../examples/set_logger_interval.py
    :language: py
+
+custom_logging.py
+-----------------------------
+
+.. literalinclude:: ../examples/custom_logging.py
+   :language: py
