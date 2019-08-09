@@ -156,17 +156,13 @@ def timestamp_to_milliseconds(obj):
     ----------
     obj
         A :class:`~datetime.datetime` object, an ISO-8601 formatted :class:`str`,
-        a :class:`float` in seconds, or an :class:`int` in milliseconds. If
-        :data:`None` then returns 0.
+        a :class:`float` in seconds, or an :class:`int` in milliseconds.
 
     Returns
     -------
     :class:`int`
         The timestamp in milliseconds.
     """
-    if obj is None:
-        return 0
-
     if isinstance(obj, int):  # in milliseconds
         return obj
 
