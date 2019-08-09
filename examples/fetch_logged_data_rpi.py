@@ -30,7 +30,7 @@ s = SHT3XService()
 # Perform this 2 times to reduce missing data packets during the Bluetooth download.
 # This step can take a very long time (minutes) if there is a lot of data
 # to fetch or if the Bluetooth connection is slow/keeps dropping out.
-temperatures, humidities = s.fetch_logged_data(mac_address, num_iterations=2)
+temperatures, humidities = s.fetch_logged_data(mac_address, num_iterations=2, as_datetime=True)
 
 # Disconnect from the Smart Gadget when finished communicating with it
 s.disconnect_gadgets()

@@ -560,7 +560,15 @@ class SHT3XService(SmartGadgetService):
             Passed to :meth:`.SHT3X.set_newest_timestamp`.
         as_datetime : :class:`bool`
             If :data:`True` then return the timestamps as :class:`~datetime.datetime` objects
-            otherwise return the timestamps as an :class:`int` in milliseconds.
+            otherwise return the timestamps as an :class:`int` in milliseconds. If you are
+            calling this method from a remote computer (i.e., you are not running your script
+            on a Raspberry Pi) then you **must** keep this value as :data:`False` otherwise
+            you will get the following error:
+
+              ``TypeError: Object of type datetime is not JSON serializable``
+
+            You can convert the timestamps after getting the data from the Raspberry Pi
+            by calling :func:`~smartgadget.milliseconds_to_datetime` on each timestamp.
 
         Returns
         -------
@@ -615,7 +623,8 @@ class SHT3XService(SmartGadgetService):
                 i += 1
                 j += 1
 
-        interval = self._gadgets_connected[mac_address].delegate.interval
+        delegate = self._gadgets_connected[mac_address].delegate
+        interval = delegate.interval
         temperatures, humidities = [], []
         for iteration in range(num_iterations):
 
@@ -682,8 +691,12 @@ class SHT3XService(SmartGadgetService):
             #  clusters, like 20 missing values within the first 100 data points and 4 missing
             #  values within the last 100 data points, we could start to break up fetching
             #  the data into smaller ranges
-            oldest = min(bad_timestamps_t[0], bad_timestamps_h[0]) - 2 * interval
-            newest = max(bad_timestamps_t[-1], bad_timestamps_h[-1]) + 2 * interval
+            oldest_t = bad_timestamps_t[0] if bad_timestamps_t else delegate.oldest
+            oldest_h = bad_timestamps_h[0] if bad_timestamps_h else delegate.oldest
+            oldest = min(oldest_t, oldest_h) - 2 * interval
+            newest_t = bad_timestamps_t[-1] if bad_timestamps_t else delegate.newest
+            newest_h = bad_timestamps_h[-1] if bad_timestamps_h else delegate.newest
+            newest = max(newest_t, newest_h) + 2 * interval
 
         if temperatures:
             n = len(temperatures) - len(bad_timestamps(temperatures))
