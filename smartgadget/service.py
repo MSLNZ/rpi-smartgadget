@@ -41,6 +41,8 @@ class SmartGadgetService(Service):
         self._scanner = Scanner()
         self._gadgets_available = {}
         self._gadgets_connected = {}
+        # only add a MAC address in here if the connection request was made explicitly
+        self._requested_connections = set()
 
     def max_attempts(self) -> int:
         """Returns the maximum number of times to try to connect or read/write data from/to a Smart Gadget.
@@ -87,11 +89,11 @@ class SmartGadgetService(Service):
             particular SHTxx class.
         """
         self._gadgets_available.clear()
-        logger.debug('Start scanning for {!r}...'.format(self._device_name))
+        logger.info('Scanning for {!r}...'.format(self._device_name))
         for d in self._scanner.scan(timeout=timeout, passive=passive):
             if d.getValueText(d.COMPLETE_LOCAL_NAME) == self._device_name:
                 self._gadgets_available[d.addr] = d
-        logger.debug('Found {} Smart Gadgets'.format(len(self._gadgets_available)))
+        logger.info('Found {} Smart Gadgets'.format(len(self._gadgets_available)))
         return list(self._gadgets_available)
 
     def connect_gadget(self, mac_address, strict=True) -> bool:
@@ -147,7 +149,8 @@ class SmartGadgetService(Service):
         for mac_address in mac_addresses:
             self._retries_remaining = self._max_attempts
             try:
-                self._gadgets_connected[mac_address] = self._connect(mac_address)
+                self._connect(mac_address)
+                self._requested_connections.add(mac_address)
             except BTLEDisconnectError as e:
                 if strict:
                     logger.error(e)
@@ -178,20 +181,28 @@ class SmartGadgetService(Service):
         gadget = self._gadgets_connected.pop(mac_address, None)
         if gadget:
             try:
-                logger.debug('Disconnecting from {!r}...'.format(mac_address))
+                logger.info('Disconnecting from {!r}...'.format(mac_address))
                 gadget.disconnect()
             except:
                 pass
+        try:
+            self._requested_connections.remove(mac_address)
+        except:
+            pass
 
     def disconnect_gadgets(self):
         """Disconnect from all Smart Gadgets."""
-        for gadget in self._gadgets_connected.values():
+        for mac_address, gadget in self._gadgets_connected.items():
             try:
                 gadget.disconnect()
             except:
                 pass
+            try:
+                self._requested_connections.remove(mac_address)
+            except:
+                pass
         self._gadgets_connected.clear()
-        logger.debug('Disconnected from all Smart Gadgets')
+        logger.info('Disconnected from all Smart Gadgets')
 
     def temperature(self, mac_address) -> float:
         """Returns the current temperature for the specified MAC address.
@@ -389,8 +400,9 @@ class SmartGadgetService(Service):
             while gadget is None:
                 try:
                     self._retries_remaining -= 1
-                    logger.debug('Connecting to {!r}...'.format(mac_address))
+                    logger.info('Connecting to {!r}...'.format(mac_address))
                     gadget = self._cls(device, interface=self._interface)
+                    self._gadgets_connected[mac_address] = gadget
                 except BTLEDisconnectError as e:
                     if self._retries_remaining < 1:
                         logger.error(e)
@@ -402,20 +414,20 @@ class SmartGadgetService(Service):
     def _process(self, method_name, mac_address, **kwargs):
         """All Smart Gadget services call this method to process the request."""
         self._retries_remaining = self._max_attempts
-        add_to_gadgets_connected = False
+        cache_it = False
         while True:
             gadget = self._connect(mac_address)
-            if add_to_gadgets_connected:
+            if cache_it and mac_address in self._requested_connections:
                 self._gadgets_connected[mac_address] = gadget
-                logger.debug('The connection to MAC address {!r} has been cached'.format(mac_address))
+                logger.info('The connection to MAC address {!r} has been cached'.format(mac_address))
 
             try:
-                logger.debug('Processing {!r} from {!r} -- kwargs={}'.format(method_name, mac_address, kwargs))
+                logger.info('Processing {!r} from {!r} -- kwargs={}'.format(method_name, mac_address, kwargs))
                 return getattr(gadget, method_name)(**kwargs)
             except (BrokenPipeError, BTLEDisconnectError) as e:
                 if self._retries_remaining < 1:
                     logger.error(e)
                     raise
-                add_to_gadgets_connected = self._gadgets_connected.pop(mac_address, None) is not None
+                cache_it = self._gadgets_connected.pop(mac_address, None) is not None
                 text = 'retry remains' if self._retries_remaining == 1 else 'retries remaining'
                 logger.warning('{} -- {} {}'.format(e, self._retries_remaining, text))
