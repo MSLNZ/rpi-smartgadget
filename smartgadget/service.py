@@ -400,7 +400,10 @@ class SmartGadgetService(Service):
             while gadget is None:
                 try:
                     self._retries_remaining -= 1
-                    logger.info('Connecting to {!r}...'.format(mac_address))
+                    if mac_address in self._requested_connections:
+                        logger.info('Re-connecting to {!r}...'.format(mac_address))
+                    else:
+                        logger.info('Connecting to {!r}...'.format(mac_address))
                     gadget = self._cls(device, interface=self._interface)
                     self._gadgets_connected[mac_address] = gadget
                 except BTLEDisconnectError as e:
@@ -414,20 +417,18 @@ class SmartGadgetService(Service):
     def _process(self, method_name, mac_address, **kwargs):
         """All Smart Gadget services call this method to process the request."""
         self._retries_remaining = self._max_attempts
-        cache_it = False
         while True:
             gadget = self._connect(mac_address)
-            if cache_it and mac_address in self._requested_connections:
-                self._gadgets_connected[mac_address] = gadget
-                logger.info('The connection to MAC address {!r} has been cached'.format(mac_address))
-
             try:
                 logger.info('Processing {!r} from {!r} -- kwargs={}'.format(method_name, mac_address, kwargs))
-                return getattr(gadget, method_name)(**kwargs)
+                out = getattr(gadget, method_name)(**kwargs)
+                if mac_address not in self._requested_connections:
+                    gadget.disconnect()
+                return out
             except (BrokenPipeError, BTLEDisconnectError) as e:
                 if self._retries_remaining < 1:
                     logger.error(e)
                     raise
-                cache_it = self._gadgets_connected.pop(mac_address, None) is not None
+                self._gadgets_connected.pop(mac_address, None)
                 text = 'retry remains' if self._retries_remaining == 1 else 'retries remaining'
                 logger.warning('{} -- {} {}'.format(e, self._retries_remaining, text))
