@@ -260,7 +260,7 @@ class SHT3X(SmartGadget):
             data = timestamp_to_milliseconds(timestamp)
         self._write(self.SYNC_TIME_MS_HANDLE, '<Q', data)
 
-    def fetch_logged_data(self, enable_temperature=True, enable_humidity=True,
+    def fetch_logged_data(self, *, enable_temperature=True, enable_humidity=True,
                           sync=None, oldest=None, newest=None, as_datetime=False) -> Tuple[list, list]:
         """Returns the logged temperature and humidity values.
 
@@ -525,8 +525,8 @@ class SHT3XService(SmartGadgetService):
         """
         self._process('set_sync_time', mac_address, timestamp=timestamp)
 
-    def fetch_logged_data(self, mac_address, enable_temperature=True, enable_humidity=True, num_iterations=1,
-                          sync=None, oldest=None, newest=None, as_datetime=False) -> Tuple[list, list]:
+    def fetch_logged_data(self, mac_address, *, enable_temperature=True, enable_humidity=True, sync=None,
+                          oldest=None, newest=None, as_datetime=False, num_iterations=1) -> Tuple[list, list]:
         """Returns the logged temperature and humidity values.
 
         The maximum number of temperature and humidity values that can be logged is 15872 (for each).
@@ -548,10 +548,6 @@ class SHT3XService(SmartGadgetService):
             Whether to download the temperature values.
         enable_humidity : :class:`bool`, optional
             Whether to download the humidity values.
-        num_iterations : :class:`int`, optional
-            Bluetooth does not guarantee that all data packets are received by default, its
-            connection principles are equivalent to the same ones as UDP for computer networks.
-            You can specify the number of times to download the data to fix missing packets.
         sync
             Passed to :meth:`.SHT3X.set_sync_time`.
         oldest
@@ -569,6 +565,10 @@ class SHT3XService(SmartGadgetService):
 
             You can convert the timestamps after getting the data from the Raspberry Pi
             by calling :func:`~smartgadget.milliseconds_to_datetime` on each timestamp.
+        num_iterations : :class:`int`, optional
+            Bluetooth does not guarantee that all data packets are received by default, its
+            connection principles are equivalent to the same ones as UDP for computer networks.
+            You can specify the number of times to download the data to fix missing packets.
 
         Returns
         -------
