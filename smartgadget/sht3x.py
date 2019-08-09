@@ -271,8 +271,9 @@ class SHT3X(SmartGadget):
 
         The data is returned as an N x 2 :class:`list`:
 
-        * The first column is the timestamp
-        * The second column is the value
+        * The first column is the timestamp :math:`\\rightarrow` :class:`int` or :class:`~datetime.datetime`
+        * The second column is the value :math:`\\rightarrow` :class:`float` or :data:`None` (if there was
+          an error downloading the value, see :meth:`SHT3XService.fetch_logged_data` for more details)
 
         Parameters
         ----------
@@ -535,8 +536,9 @@ class SHT3XService(SmartGadgetService):
 
         The data is returned as an N x 2 :class:`list`:
 
-        * The first column is the timestamp
-        * The second column is the value
+        * The first column is the timestamp :math:`\\rightarrow` :class:`int` or :class:`~datetime.datetime`
+        * The second column is the value :math:`\\rightarrow` :class:`float` or :data:`None` (if there was
+          an error downloading the value)
 
         Parameters
         ----------
