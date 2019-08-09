@@ -131,6 +131,7 @@ class SHT3X(SmartGadget):
             'hardware_revision': self._read(self.HARDWARE_REVISION_STRING_HANDLE),
             'humidity': h,
             'logger_interval_ms': self.logger_interval(),
+            'mac_address': self.addr,
             'manufacturer': self._read(self.MANUFACTURER_NAME_STRING_HANDLE),
             'model_number': self._read(self.MODEL_NUMBER_STRING_HANDLE),
             'newest_timestamp_ms': self.newest_timestamp(),

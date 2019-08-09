@@ -82,6 +82,7 @@ class SHTC1(SmartGadget):
             'firmware_revision': self._read(self.FIRMWARE_REVISION_STRING_CHARACTERISTIC_UUID),
             'hardware_revision': self._read(self.HARDWARE_REVISION_STRING_CHARACTERISTIC_UUID),
             'humidity': h,
+            'mac_address': self.addr,
             'manufacturer': self._read(self.MANUFACTURER_NAME_STRING_CHARACTERISTIC_UUID),
             'model_number': self._read(self.MODEL_NUMBER_STRING_CHARACTERISTIC_UUID),
             'rssi': self.rssi(),
