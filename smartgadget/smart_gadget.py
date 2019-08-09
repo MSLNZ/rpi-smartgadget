@@ -2,7 +2,6 @@
 Base class for a Smart Gadget.
 """
 import struct
-from datetime import datetime
 from typing import Union, Tuple
 
 try:
@@ -10,7 +9,7 @@ try:
 except ImportError:  # then not on the Raspberry Pi
     Peripheral, DefaultDelegate, UUID = object, object, lambda u: u
 
-from . import dewpoint
+from . import dewpoint, logger
 
 
 class SmartGadget(Peripheral):
@@ -166,16 +165,19 @@ class SmartGadget(Peripheral):
             return data.decode()
         values = struct.unpack(fmt, data)
         if len(values) == 1:
+            logger.debug('READ  address={!r} characteristic=0x{:x} -> {}'.format(self.addr, hnd_or_uuid, values[0]))
             return values[0]
+        logger.debug('READ  address={!r} characteristic=0x{:x} -> {}'.format(self.addr, hnd_or_uuid, values))
         return values
 
-    def _write(self, hnd_or_uuid, fmt, value, with_response=False):
+    def _write(self, hnd_or_uuid, fmt, value, with_response=True):
         """Write a value.
 
         hnd_or_uuid: A handle (int) or uuid (str)
         fmt (str): The format to pass to struct.pack()
         value: The value to write
         """
+        logger.debug('WRITE address={!r} characteristic=0x{:x} value={}'.format(self.addr, hnd_or_uuid, value))
         data = struct.pack(fmt, value)
         if isinstance(hnd_or_uuid, int):  # handle
             self.writeCharacteristic(hnd_or_uuid, data, withResponse=with_response)
@@ -197,24 +199,40 @@ class NotificationHandler(DefaultDelegate):
         """
         super(NotificationHandler, self).__init__()
         self.parent = parent
-        self.initialize(-1, 0, 0, True, True)
-        self.run_number_offset = 1  # the manual says it starts at 0 but it actually starts at 1 (for firmware v1.3)
-        self.max_run_number_repeats = 5
-
-    def initialize(self, logger_interval, oldest_timestamp, newest_timestamp, enable_temperature, enable_humidity):
-        """Automatically called before getting the notifications to initialize all parameters."""
         self.temperatures = []
         self.humidities = []
+        self.temperatures_finished = False
+        self.humidities_finished = False
+        self.interval = -1
+        self.oldest = -1
+        self.newest = -1
+        self.temperature_repeats = 0
+        self.humidity_repeats = 0
+        self.run_number_offset = 1
+        self.max_repeats = 5
+
+    def prepare(self, interval, oldest, newest, enable_temperature, enable_humidity):
+        """Automatically called before getting the notifications to initialize all parameters."""
         self.temperatures_finished = not enable_temperature
         self.humidities_finished = not enable_humidity
-        self.finished = False  # whether all the logged data was downloaded
-        self.logger_interval = logger_interval * 1e-3
-        self.oldest_timestamp = oldest_timestamp * 1e-3
-        self.newest_timestamp = newest_timestamp * 1e-3
-        self.previous_temperature_run_number = -1
-        self.previous_humidity_run_number = -1
-        self.temperature_run_number_repeats = 0  # the number of times the run number did not change
-        self.humidity_run_number_repeats = 0  # the number of times the run number did not change
+        self.interval = interval
+        self.oldest = oldest
+        self.newest = newest
+        self.temperature_repeats = 0
+        self.humidity_repeats = 0
+
+        # the value of the oldest timestamp will never actually downloaded
+        # that is why we use range(1, n)
+        n = (newest - oldest) // interval + 1
+        if enable_temperature:
+            self.temperatures = [[oldest + i * interval, None] for i in range(1, n)]
+        else:
+            self.temperatures = []
+
+        if enable_humidity:
+            self.humidities = [[oldest + i * interval, None] for i in range(1, n)]
+        else:
+            self.humidities = []
 
     def handleNotification(self, handle, data):
         """Received a notification.
@@ -229,56 +247,46 @@ class NotificationHandler(DefaultDelegate):
         n = (len(data) - 4)//4
         if n > 0:  # notification for logged data
             values = struct.unpack('<I{}f'.format(n), data)
-
-            # avoid multiple attribute lookups in the loop
-            fromtimestamp = datetime.fromtimestamp
-            newest_timestamp = self.newest_timestamp
-            logger_interval = self.logger_interval
             if handle == self.parent.TEMPERATURE_HANDLE:
-                append = self.temperatures.append
+                array = self.temperatures
+                self.temperature_repeats = 0
             elif handle == self.parent.HUMIDITY_HANDLE:
-                append = self.humidities.append
+                array = self.humidities
+                self.humidity_repeats = 0
             else:
                 raise ValueError('Unhandled notification from handle={}'.format(handle))
 
+            # data is downloaded from the newest to the oldest log event
+            # the manual says that the run number starts at 0 but it actually starts at 1 (for firmware v1.3)
             run_number = values[0] - self.run_number_offset
+            index = len(array) - values[0]
             for v in values[1:]:
-                # converting to an ISO timestamp is typically faster than the time it takes to
-                # receive the next notification so this conversion doesn't really slow things down
-                append([run_number, str(fromtimestamp(newest_timestamp - run_number * logger_interval)), v])
+                row = array[index]
+                timestamp = self.newest - run_number * self.interval
+                assert row[0] == timestamp, 'timestamp mismatch -> {} != {}'.format(row[0], timestamp)
+                row[1] = v
+                index -= 1
                 run_number += 1
 
         else:
-            # notification for a single temperature or humidity value
-            # its possible that a single value is intermittent with the logged notification
+            # a notification for a single temperature or humidity value
+            # it is possible that a single value is received intermittently within the logger notification
             # therefore we must introduce checks to decide if downloading the logged data has finished
             if handle == self.parent.TEMPERATURE_HANDLE:
-                if self.temperatures:  # check if all logged data was downloaded
-                    run_number = self.temperatures[-1][0] + self.run_number_offset
-                    last_timestamp = self.newest_timestamp - run_number * self.logger_interval
-                    if last_timestamp <= self.oldest_timestamp or \
-                            self.temperature_run_number_repeats > self.max_run_number_repeats:
-                        self.temperatures_finished = True
-                        self.parent.disable_temperature_notifications()
-                    if self.previous_temperature_run_number == run_number:
-                        self.temperature_run_number_repeats += 1
-                    else:
-                        self.temperature_run_number_repeats = 0
-                    self.previous_temperature_run_number = run_number
+                if self.temperatures:
+                    self.temperatures_finished = self.temperatures[0][1] is not None
+                    if not self.temperatures_finished:
+                        # then maybe the last data packet never arrived
+                        # make sure we don't end up in an infinite loop waiting for packets that will never arrive
+                        self.temperature_repeats += 1
+                        self.temperatures_finished = self.temperature_repeats >= self.max_repeats
             elif handle == self.parent.HUMIDITY_HANDLE:
-                if self.humidities:  # check if all logged data was downloaded
-                    run_number = self.humidities[-1][0] + self.run_number_offset
-                    last_timestamp = self.newest_timestamp - run_number * self.logger_interval
-                    if last_timestamp <= self.oldest_timestamp or \
-                            self.humidity_run_number_repeats > self.max_run_number_repeats:
-                        self.humidities_finished = True
-                        self.parent.disable_humidity_notifications()
-                    if self.previous_humidity_run_number == run_number:
-                        self.humidity_run_number_repeats += 1
-                    else:
-                        self.humidity_run_number_repeats = 0
-                    self.previous_humidity_run_number = run_number
+                if self.humidities:
+                    self.humidities_finished = self.humidities[0][1] is not None
+                    if not self.humidities_finished:
+                        # then maybe the last data packet never arrived
+                        # make sure we don't end up in an infinite loop waiting for packets that will never arrive
+                        self.humidity_repeats += 1
+                        self.humidities_finished = self.humidity_repeats >= self.max_repeats
             else:
                 raise ValueError('Unhandled notification from handle={}'.format(handle))
-
-            self.finished = self.temperatures_finished and self.humidities_finished

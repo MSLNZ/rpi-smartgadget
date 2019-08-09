@@ -1,8 +1,8 @@
 """
 The SHT3X series Smart Gadget from Sensirion.
 """
-import time
-import heapq
+from time import perf_counter
+from datetime import datetime
 from typing import Tuple
 
 try:
@@ -10,7 +10,7 @@ try:
 except ImportError:  # then not on the Raspberry Pi
     Peripheral, UUID = object, lambda u: u
 
-from . import logger, timestamp_to_milliseconds
+from . import logger, timestamp_to_milliseconds, milliseconds_to_datetime
 from .smart_gadget import SmartGadget
 from .service import SmartGadgetService
 
@@ -255,26 +255,24 @@ class SHT3X(SmartGadget):
             If :data:`None` then uses the current time of the Raspberry Pi.
         """
         if timestamp is None:
-            data = round(time.time() * 1000)
+            data = round(datetime.now().timestamp() * 1000)
         else:
             data = timestamp_to_milliseconds(timestamp)
         self._write(self.SYNC_TIME_MS_HANDLE, '<Q', data)
 
-    def fetch_logged_data(self, enable_temperature=True, enable_humidity=True, num_iterations=1,
-                          sync=None, oldest=None, newest=None) -> Tuple[list, list]:
+    def fetch_logged_data(self, enable_temperature=True, enable_humidity=True,
+                          sync=None, oldest=None, newest=None, as_datetime=False) -> Tuple[list, list]:
         """Returns the logged temperature and humidity values.
 
-        The maximum number of temperature values that can be logged is 15872 and
-        the maximum number of humidity values that can be logged is 15872.
+        The maximum number of temperature and humidity values that can be logged is 15872 (for each).
 
-        It can take approximately 1 minute to perform 1 iteration of the
-        download if the Smart Gadget memory is full and you are requesting all data.
+        It can take approximately 80 seconds to fetch the maximum amount of data that can be saved
+        in the internal memory of the Smart Gadget.
 
-        The data is returned as an N x 3 :class:`list`:
+        The data is returned as an N x 2 :class:`list`:
 
-        * the first column is the run number (as documented in the manual) :math:`\\rightarrow` :class:`int`
-        * the second column is the timestamp (in ISO-8601 format) :math:`\\rightarrow` :class:`str`
-        * the third column is the value :math:`\\rightarrow` :class:`float`
+        * The first column is the timestamp
+        * The second column is the value
 
         Parameters
         ----------
@@ -282,99 +280,64 @@ class SHT3X(SmartGadget):
             Whether to download the temperature values.
         enable_humidity : :class:`bool`, optional
             Whether to download the humidity values.
-        num_iterations : :class:`int`, optional
-            Bluetooth does not guarantee that all data packets are received by default, its
-            connection principles are equivalent to the same ones as UDP for computer networks.
-            You can specify the number of times to download the data to fix missing packets.
         sync
             Passed to :meth:`.set_sync_time`.
         oldest
             Passed to :meth:`.set_oldest_timestamp`.
         newest
             Passed to :meth:`.set_newest_timestamp`.
+        as_datetime : :class:`bool`
+            If :data:`True` then return the timestamps as :class:`~datetime.datetime` objects
+            otherwise return the timestamps as an :class:`int` in milliseconds.
 
         Returns
         -------
-        :class:`list` of :class:`list`
+        :class:`list`
             The logged temperature values [degree C].
-        :class:`list` of :class:`list`
+        :class:`list`
             The logged humidity values [%RH].
         """
         if not enable_temperature and not enable_humidity:
-            logger.debug('Chose not to fetch the temperature nor the humidity values')
             return [], []
 
-        # set the logger timestamps
+        # enable notifications
+        if enable_temperature:
+            self.enable_temperature_notifications()
+        if enable_humidity:
+            self.enable_humidity_notifications()
+
+        # set the logger timestamp information
         self.set_sync_time(sync)
-        self.set_oldest_timestamp(oldest)
+        self.set_oldest_timestamp(oldest or 0)
         if newest is not None:
             self.set_newest_timestamp(newest)
 
-        # wait for the values of the oldest and newest timestamps to be updated
-        oldest, newest = 0, 0
-        while oldest == 0 or newest == 0:
-            oldest, newest = self.oldest_timestamp(), self.newest_timestamp()
-
+        # get the actual logger timestamp information
         interval = self.logger_interval()
-        num_expected = (newest - oldest) // interval
-        temperatures, humidities = [], []
-        for iteration in range(num_iterations):
+        oldest = self.oldest_timestamp()
+        newest = self.newest_timestamp()
 
-            if enable_temperature:
-                self.enable_temperature_notifications()
-            if enable_humidity:
-                self.enable_humidity_notifications()
-
-            # start downloading
-            self.delegate.initialize(interval, oldest, newest, enable_temperature, enable_humidity)
-            self._write(self.START_LOGGER_DOWNLOAD_HANDLE, '<B', 1)
-            while True:
-                self.waitForNotifications(1)
-                if self.delegate.finished:
-                    break
-            self._write(self.START_LOGGER_DOWNLOAD_HANDLE, '<B', 0)
-
-            if enable_temperature:
-                logger.debug('Iteration {} of {} -- Fetched {} of {} temperature values'
-                             .format(iteration+1, num_iterations, len(self.delegate.temperatures), num_expected))
-            if enable_humidity:
-                logger.debug('Iteration {} of {} -- Fetched {} of {} humidity values'
-                             .format(iteration+1, num_iterations, len(self.delegate.humidities), num_expected))
-
-            if num_iterations == 1:
-                if enable_temperature:
-                    temperatures = self.delegate.temperatures
-                if enable_humidity:
-                    humidities = self.delegate.humidities
-            else:
-                def merge_no_duplicates(*iterables):
-                    last = object()
-                    for val in heapq.merge(*iterables):
-                        if val != last:
-                            last = val
-                            yield val
-
-                # merge the previous and current downloads
-                if enable_temperature:
-                    temperatures = list(merge_no_duplicates(temperatures, self.delegate.temperatures))
-                if enable_humidity:
-                    humidities = list(merge_no_duplicates(humidities, self.delegate.humidities))
-
-            # has all the data been downloaded?
-            if enable_temperature and len(temperatures) == num_expected and \
-                    enable_humidity and len(humidities) == num_expected:
+        # download the data
+        self.delegate.prepare(interval, oldest, newest, enable_temperature, enable_humidity)
+        self._write(self.START_LOGGER_DOWNLOAD_HANDLE, '<B', 1)
+        while True:
+            self.waitForNotifications(1)
+            if self.delegate.temperatures_finished and self.delegate.humidities_finished:
                 break
-            if not enable_temperature and enable_humidity and len(humidities) == num_expected:
-                break
-            if not enable_humidity and enable_temperature and len(temperatures) == num_expected:
-                break
+        self._write(self.START_LOGGER_DOWNLOAD_HANDLE, '<B', 0)
 
+        # disable notifications
         if enable_temperature:
-            logger.debug('Finished -- Fetched {} of {} temperature values'.format(len(temperatures), num_expected))
+            self.disable_temperature_notifications()
         if enable_humidity:
-            logger.debug('Finished -- Fetched {} of {} humidity values'.format(len(humidities), num_expected))
+            self.disable_humidity_notifications()
 
-        return temperatures, humidities
+        if as_datetime:
+            temperatures = [[milliseconds_to_datetime(ms), v] for ms, v in self.delegate.temperatures]
+            humidities = [[milliseconds_to_datetime(ms), v] for ms, v in self.delegate.humidities]
+            return temperatures, humidities
+
+        return self.delegate.temperatures, self.delegate.humidities
 
 
 class SHT3XService(SmartGadgetService):
@@ -562,20 +525,18 @@ class SHT3XService(SmartGadgetService):
         self._process('set_sync_time', mac_address, timestamp=timestamp)
 
     def fetch_logged_data(self, mac_address, enable_temperature=True, enable_humidity=True, num_iterations=1,
-                          sync=None, oldest=None, newest=None) -> Tuple[list, list]:
+                          sync=None, oldest=None, newest=None, as_datetime=False) -> Tuple[list, list]:
         """Returns the logged temperature and humidity values.
 
-        The maximum number of temperature values that can be logged is 15872 and
-        the maximum number of humidity values that can be logged is 15872.
+        The maximum number of temperature and humidity values that can be logged is 15872 (for each).
 
-        It can take approximately 1 minute to perform 1 iteration of the
-        download if the Smart Gadget memory is full and you are requesting all data.
+        It can take approximately 80 seconds per iteration to fetch the maximum amount of data that
+        can be saved in the internal memory of the Smart Gadget.
 
-        The data is returned as an N x 3 :class:`list`:
+        The data is returned as an N x 2 :class:`list`:
 
-        * the first column is the run number (as documented in the manual) :math:`\\rightarrow` :class:`int`
-        * the second column is the timestamp (in ISO-8601 format) :math:`\\rightarrow` :class:`str`
-        * the third column is the value :math:`\\rightarrow` :class:`float`
+        * The first column is the timestamp
+        * The second column is the value
 
         Parameters
         ----------
@@ -595,14 +556,144 @@ class SHT3XService(SmartGadgetService):
             Passed to :meth:`.SHT3X.set_oldest_timestamp`.
         newest
             Passed to :meth:`.SHT3X.set_newest_timestamp`.
+        as_datetime : :class:`bool`
+            If :data:`True` then return the timestamps as :class:`~datetime.datetime` objects
+            otherwise return the timestamps as an :class:`int` in milliseconds.
 
         Returns
         -------
-        :class:`list` of :class:`list`
+        :class:`list`
             The logged temperature values [degree C].
-        :class:`list` of :class:`list`
+        :class:`list`
             The logged humidity values [%RH].
         """
-        return self._process('fetch_logged_data', mac_address,
-                             enable_temperature=enable_temperature, enable_humidity=enable_humidity,
-                             num_iterations=num_iterations, sync=sync, oldest=oldest, newest=newest)
+        def bad_timestamps(array):
+            # Get the timestamps that contain values that are `None`
+            return [ms for ms, v in array if v is None]
+
+        def merge(logger_interval, original, latest):
+            # Merge the data from `latest` into `original` that isn't `None`
+            if not latest:
+                return
+
+            # Cannot compare the timestamps to merge the two lists because the timestamps
+            # have too much variability based on syncing with an external clock. Compare
+            # the values instead.
+            #
+            # Find the index offset such that the values in the 2 lists are exactly the
+            # same (element wise).
+            index = max(0, round(abs(latest[0][0] - original[0][0]) / logger_interval) - 1)
+            # check a range of indices centered around the best-guess index
+            indices = [index, index - 1, index + 1, index - 2, index + 2]
+            n1, n2 = len(original), len(latest)
+            for i in indices:
+                if i < 0:
+                    continue
+                index, j = i, 0
+                while i < n1 and j < n2:
+                    v1, v2 = original[i][1], latest[j][1]
+                    if v1 is not None and v2 is not None and v1 != v2:
+                        # then we have not found the index that aligns the 2 lists
+                        # as long as this index isn't the last item in the `indices`
+                        # list then we will try the next item in the `indices` list
+                        assert index != indices[-1], 'merging value mismatch -> {} != {}'.format(v1, v2)
+                        break
+                    i += 1
+                    j += 1
+                break  # all values that are not `None` are exactly the same (element-wise)
+
+            # we now have the index that aligns the lists, so merge them
+            i, j = index, 0
+            n1, n2 = len(original), len(latest)
+            while i < n1 and j < n2:
+                row = original[i]
+                value = latest[j][1]
+                if value is not None:
+                    row[1] = value
+                i += 1
+                j += 1
+
+        interval = self._gadgets_connected[mac_address].delegate.interval
+        temperatures, humidities = [], []
+        for iteration in range(num_iterations):
+
+            if not enable_temperature and not enable_humidity:
+                break
+
+            t0 = perf_counter()
+            latest_t, latest_h = self._process(
+                'fetch_logged_data', mac_address,
+                enable_temperature=enable_temperature, enable_humidity=enable_humidity,
+                sync=sync, oldest=oldest, newest=newest, as_datetime=False
+            )
+            dt = perf_counter() - t0
+
+            if iteration == 0:
+                temperatures, humidities = latest_t, latest_h
+            else:
+                merge(interval, temperatures, latest_t)
+                merge(interval, humidities, latest_h)
+
+            # has all the data been downloaded?
+            bad_timestamps_t = bad_timestamps(temperatures)
+            bad_timestamps_h = bad_timestamps(humidities)
+            if not bad_timestamps_t and not bad_timestamps_h:
+                break
+
+            enable_temperature = len(bad_timestamps_t) > 0
+            enable_humidity = len(bad_timestamps_h) > 0
+
+            # There is no point trying to re-download data from the Smart Gadget for the
+            # values that are still `None` if the data is no longer available in the internal
+            # memory of the Smart Gadget
+            if enable_temperature:
+                enable_temperature = bad_timestamps_t[-1] > latest_t[0][0]
+            if enable_humidity:
+                enable_humidity = bad_timestamps_h[-1] > latest_h[0][0]
+
+            if latest_t:
+                n = len(latest_t) - len(bad_timestamps(latest_t))
+                logger.debug('Iteration {} of {} -- Fetched {} of {} temperature values in {:.3f} seconds. '
+                             '{} values are still missing'
+                             .format(iteration+1, num_iterations, n, len(latest_t), dt, len(bad_timestamps_t)))
+            if latest_h:
+                n = len(latest_h) - len(bad_timestamps(latest_h))
+                logger.debug('Iteration {} of {} -- Fetched {} of {} humidity values in {:.3f} seconds. '
+                             '{} values are still missing'
+                             .format(iteration+1, num_iterations, n, len(latest_h), dt, len(bad_timestamps_h)))
+
+            # Only fetch data in the range that still contains `None` values.
+            # Extend the range a little bit.
+            #
+            # One could modify the values of 'oldest' and 'newest' more cleverly to only
+            # re-download the data where the values are still 'None' in smaller ranges.
+            # However, there is a large overhead in setting up the Smart Gadget when
+            # 'fetch_logged_data' is called. For example, downloading about 12000 temperature
+            # and 12000 humidity data points takes about 80 seconds, so 24000/80 = 300 values/second.
+            # If, for example, one specified a timestamp range that fetched 9 temperature and 9
+            # humidity values then that took about 1.5 seconds, so 18/1.5 = 12 values/second.
+            # Since the missing data packets are randomly scattered in small (4-, 8-, 12-byte)
+            # chunks throughout the data there is really no point trying to re-download small
+            # time ranges.
+            #
+            # TODO Once the ranges where the data values need to be re-downloaded become isolated
+            #  clusters, like 20 missing values within the first 100 data points and 4 missing
+            #  values within the last 100 data points, we could start to break up fetching
+            #  the data into smaller ranges
+            oldest = min(bad_timestamps_t[0], bad_timestamps_h[0]) - 2 * interval
+            newest = max(bad_timestamps_t[-1], bad_timestamps_h[-1]) + 2 * interval
+
+        if temperatures:
+            n = len(temperatures) - len(bad_timestamps(temperatures))
+            logger.debug('Finished -- Fetched {} of {} temperature values'.format(n, len(temperatures)))
+
+        if humidities:
+            n = len(humidities) - len(bad_timestamps(humidities))
+            logger.debug('Finished -- Fetched {} of {} humidity values'.format(n, len(humidities)))
+
+        if as_datetime:
+            t = [[milliseconds_to_datetime(ms), v] for ms, v in temperatures]
+            h = [[milliseconds_to_datetime(ms), v] for ms, v in humidities]
+            return t, h
+
+        return temperatures, humidities
