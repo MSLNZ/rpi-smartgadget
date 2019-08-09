@@ -26,7 +26,7 @@ rpi.connect_gadget(mac_address)
 # to fetch or if the Bluetooth connection is slow/keeps dropping out.
 # There is no option to display the current status of the request
 # -- see fetch_logged_data_rpi.py which will display status updates.
-temperatures, humidities = rpi.fetch_logged_data(mac_address, enable_humidity=False)
+temperatures, humidities = rpi.fetch_logged_data(mac_address, enable_humidity=False, as_datetime=True)
 print('Fetched {} temperature values'.format(len(temperatures)))
 
 # Disconnect from the Raspberry Pi when finished communicating with it
@@ -34,6 +34,6 @@ rpi.disconnect()
 
 # Save the temperature results
 with open('temperature.csv', 'w') as fp:
-    fp.write('run,timestamp,temperature[C]\n')
+    fp.write('timestamp,temperature[C]\n')
     for row in temperatures:
-        fp.write('{},{},{}\n'.format(*row))
+        fp.write('{},{}\n'.format(*row))

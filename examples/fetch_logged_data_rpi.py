@@ -37,11 +37,11 @@ s.disconnect_gadgets()
 
 # Save the results
 with open('temperature.csv', 'w') as fp:
-    fp.write('run,timestamp,temperature[C]\n')
+    fp.write('timestamp,temperature[C]\n')
     for row in temperatures:
-        fp.write('{},{},{}\n'.format(*row))
+        fp.write('{},{}\n'.format(*row))
 
 with open('humidity.csv', 'w') as fp:
-    fp.write('run,timestamp,humidity[%RH]\n')
+    fp.write('timestamp,humidity[%RH]\n')
     for row in humidities:
-        fp.write('{},{},{}\n'.format(*row))
+        fp.write('{},{}\n'.format(*row))
