@@ -423,7 +423,7 @@ class SmartGadgetService(Service):
                 logger.info('Processing {!r} from {!r} -- kwargs={}'.format(method_name, mac_address, kwargs))
                 out = getattr(gadget, method_name)(**kwargs)
                 if mac_address not in self._requested_connections:
-                    gadget.disconnect()
+                    self.disconnect_gadget(mac_address)
                 return out
             except (BrokenPipeError, BTLEDisconnectError) as e:
                 if self._retries_remaining < 1:
