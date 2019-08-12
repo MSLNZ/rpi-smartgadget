@@ -28,7 +28,7 @@ for address in mac_addresses:
     print('Setting the logger interval for {!r}'.format(address))
     rpi.set_logger_interval(address, 10000)
 dt = perf_counter() - t0
-print('All Smart Gadgets are in sync to within {:.3f} seconds'.format(dt))
+print('All Smart Gadgets should be in sync to within {:.3f} seconds'.format(dt))
 
 # Disconnect from the Raspberry Pi when finished communicating with it
 rpi.disconnect()
