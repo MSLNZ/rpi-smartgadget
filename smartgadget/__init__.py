@@ -80,10 +80,7 @@ def kill_manager(*, host='raspberrypi', rpi_username='pi', rpi_password=None, ti
     """
     ssh_client = ssh.connect(host, username=rpi_username, password=rpi_password, timeout=timeout, **kwargs)
     lines = ssh.exec_command(ssh_client, 'ps aux | grep smartgadget')
-    pids = []
-    for line in lines:
-        if RPI_EXE_PATH in line:
-            pids.append(line.split()[1])
+    pids = [line.split()[1] for line in lines if RPI_EXE_PATH in line]
     for pid in pids:
         try:
             ssh.exec_command(ssh_client, 'sudo kill -9 ' + pid)
