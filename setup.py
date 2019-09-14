@@ -84,19 +84,17 @@ class BuildDocs(Command):
 
 def read(filename):
     with open(filename) as fp:
-        text = fp.read()
-    return text
+        return fp.read()
 
 
 def fetch_init(key):
     # open the __init__.py file to determine the value instead of importing the package to get the value
     init_text = read('smartgadget/__init__.py')
-    return re.compile(r'{}\s*=\s*(.*)'.format(key)).search(init_text).group(1)[1:-1]
+    return re.search(r'{}\s*=\s*(.*)'.format(key), init_text).group(1)[1:-1]
 
 
 needs_sphinx = {'doc', 'docs', 'apidoc', 'apidocs', 'build_sphinx'}.intersection(sys.argv)
 sphinx = ['sphinx', 'sphinx_rtd_theme'] if needs_sphinx else []
-
 
 setup(
     name='smartgadget',
