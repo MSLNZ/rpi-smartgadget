@@ -106,7 +106,7 @@ def dewpoint(temperature, humidity):
     """
     # TODO get formula from JLS.
     #  For now use Equation 7 from
-    #  https://www.vaisala.com/sites/default/files/documents/Humidity_Conversion_Formulas_B210973EN-F.pdf
+    #  https://www.vaisala.com/sites/default/files/documents/Humidity_Conversion_Formulas_B210973EN.pdf
 
     if temperature < -20 or temperature > 350:
         # the Equation 7 is only valid between -20 and +350 degree C
