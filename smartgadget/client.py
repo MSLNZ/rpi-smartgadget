@@ -23,7 +23,7 @@ class SmartGadgetClient(LinkedClient):
         Shut down the Smart Gadget :class:`~msl.network.service.Service`
         and the Network :class:`~msl.network.manager.Manager`.
         """
-        self.disconnect_service()
+        self.shutdown_service()
         super(SmartGadgetClient, self).disconnect()
 
     def service_error_handler(self):
