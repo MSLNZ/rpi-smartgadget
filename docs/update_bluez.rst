@@ -5,8 +5,8 @@ Update BlueZ
 ============
 
 BlueZ_ is the program that is used by a Raspberry Pi to communicate with Bluetooth devices.
-**RPi-SmartGadget** has been tested with versions 5.43, 5.44, 5.47 and 5.50. Other versions
-may work as well.
+**RPi-SmartGadget** has been tested with versions 5.43, 5.44, 5.47, 5.50, 5.52 and 5.54.
+Other versions may work as well.
 
 A script is included with **RPi-SmartGadget** that will update the version of BlueZ_.
 Since the **RPi-SmartGadget** package is :ref:`installed <rpi-smartgadget-install>` in a
@@ -25,8 +25,8 @@ and then execute
 
    bluez-update
 
-This will update BlueZ_ to version 5.50 *(the latest version at the time of writing the script)*.
-To install version 5.47 of BlueZ_ run
+This will update BlueZ_ to version 5.54 *(the latest version at the time of writing the bluez-update script)*.
+To install a specific version of BlueZ_ (e.g., version 5.47) run
 
 .. code-block:: console
 

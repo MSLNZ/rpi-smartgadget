@@ -1,10 +1,11 @@
 """
-`BlueZ <http://www.bluez.org/>`_ is a program that is used to communicate
-with Bluetooth devices on Linux.
+BlueZ_ is a program that is used to communicate with Bluetooth devices on Linux.
 
-At the time (2019-04-14) of writing this script the latest version of BlueZ
-was 5.50 and therefore this is the default version when running the
+At the time of writing this script (2020-03-31) the latest version of BlueZ_
+was 5.54 and therefore this is the default version when running the
 ``bluez-update`` console script (see setup.py).
+
+.. _BlueZ: http://www.bluez.org/
 """
 import os
 import sys
@@ -37,6 +38,7 @@ sudo systemctl start bluetooth
 echo The version of BlueZ is now ...
 bluetoothd --version
 cd ..
+echo It is recommended to reboot the Raspberry Pi
 
 # cleanup
 rm -rf bluez-{version}/
@@ -52,8 +54,8 @@ def run():
     See :ref:`rpi-smartgadget-update-bluez` for more details.
     """
 
-    # latest version of BlueZ is 5.50 as of 2019-04-14
-    version = sys.argv[-1] if len(sys.argv) > 1 else '5.50'
+    # latest version of BlueZ is 5.54 (as of 2020-03-31)
+    version = sys.argv[-1] if len(sys.argv) > 1 else '5.54'
 
     try:
         current_version = subprocess.check_output(['bluetoothd', '--version']).decode().strip()
