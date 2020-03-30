@@ -14,6 +14,12 @@ installed packages on the Raspberry Pi
 
    sudo apt update && sudo apt upgrade
 
+Make sure that you have git_ installed on the Raspberry Pi
+
+.. code-block:: console
+
+   sudo apt install git
+
 The following will install the **RPi-SmartGadget** package in a `virtual environment`_
 in the ``/home/pi/shtenv`` directory on the Raspberry Pi *(the* ``shtenv`` *directory*
 *will be automatically created)*
@@ -56,3 +62,4 @@ running either Raspbian Stretch or Buster.
 .. _virtual environment: https://docs.python.org/3/tutorial/venv.html
 .. _SSH: https://www.ssh.com/ssh/
 .. _ssh_instructions: https://www.raspberrypi.org/documentation/remote-access/ssh/
+.. _git: https://git-scm.com/
