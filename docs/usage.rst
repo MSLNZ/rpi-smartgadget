@@ -28,16 +28,16 @@ To find out what can be requested from a Smart Gadget, run the following
 
 .. code-block:: pycon
 
-    >>> print(rpi.manager(as_string=True))
+    >>> print(rpi.manager(as_string=True, indent=2))
     Manager[raspberrypi:1875]
       attributes:
         identity() -> dict
         link(service: str) -> bool
       language: Python 3.7.3
-      os: Linux 4.19.58-v7+ armv7l
+      os: Linux 4.19.97-v7+ armv7l
     Clients [1]:
       LinkedClient[192.168.1.69:63117]
-        language: Python 3.7.3
+        language: Python 3.7.7
         os: Windows 10 AMD64
     Services [1]:
       Smart Humigadget[raspberrypi:36834]
@@ -51,10 +51,9 @@ To find out what can be requested from a Smart Gadget, run the following
           disable_temperature_notifications(mac_address)
           disconnect_gadget(mac_address)
           disconnect_gadgets()
-          disconnect_service()
           enable_humidity_notifications(mac_address)
           enable_temperature_notifications(mac_address)
-          fetch_logged_data(mac_address, enable_temperature=True, enable_humidity=True, num_iterations=1, sync=None, oldest=None, newest=None) -> Tuple[list, list]
+          fetch_logged_data(mac_address, *, enable_temperature=True, enable_humidity=True, sync=None, oldest=None, newest=None, as_datetime=False, num_iterations=1) -> Tuple[list, list]
           humidity(mac_address) -> float
           humidity_notifications_enabled(mac_address) -> bool
           info(mac_address) -> dict
@@ -72,13 +71,14 @@ To find out what can be requested from a Smart Gadget, run the following
           set_oldest_timestamp(mac_address, timestamp)
           set_rpi_date(date)
           set_sync_time(mac_address, timestamp=None)
+          shutdown_service()
           temperature(mac_address) -> float
           temperature_humidity(mac_address) -> Tuple[float, float]
           temperature_humidity_dewpoint(mac_address) -> Tuple[float, float, float]
           temperature_notifications_enabled(mac_address) -> bool
         language: Python 3.7.3
         max_clients: -1
-        os: Linux 4.19.58-v7+ armv7l
+        os: Linux 4.19.97-v7+ armv7l
 
 The information about the :class:`~msl.network.manager.Manager` and which
 :class:`~msl.network.client.Client`\s and :class:`~msl.network.service.Service`\s
