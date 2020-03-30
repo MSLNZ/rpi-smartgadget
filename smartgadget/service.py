@@ -343,11 +343,10 @@ class SmartGadgetService(Service):
         """
         return self._process('info', mac_address)
 
-    def disconnect_service(self):
+    def shutdown_service(self):
         """Shutdown the Smart Gadget :class:`~msl.network.service.Service` and
         the Network :class:`~msl.network.manager.Manager`."""
         self.disconnect_gadgets()
-        self._disconnect()
 
     def restart_bluetooth(self):
         """Restart the Bluetooth driver on the Raspberry Pi.
