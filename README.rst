@@ -10,7 +10,8 @@ A Raspberry Pi is used for the Bluetooth Low Energy connectivity and the MSL-Net
 allows any computer on the same network as the Raspberry Pi to request information from the
 Smart Gadgets that are within Bluetooth range of the Raspberry Pi.
 
-Tested with a Raspberry Pi 3 Model B+ running Raspbian Stretch/Buster.
+Tested with a Raspberry Pi 3 Model B+ and a Raspberry Pi 4 Model B running either
+Raspbian Stretch or Buster.
 
 Documentation
 +++++++++++++
