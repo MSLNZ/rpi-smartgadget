@@ -6,7 +6,7 @@ from distutils.cmd import Command
 if sys.version_info[:2] < (3, 5):
     sys.exit('Python < 3.5 is not supported because the asyncio package is required')
 
-install_requires = ['msl-network>=0.4']
+install_requires = ['msl-network>=0.5']
 if sys.platform.startswith('linux'):
     install_requires.append('bluepy')
 
