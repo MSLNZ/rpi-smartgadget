@@ -12,8 +12,8 @@ def test_general():
     with pytest.raises(ValueError):
         dewpoint(20, -1)
     # humidity > 100
-    # with pytest.raises(ValueError):
-    #     dewpoint(20, 101)
+    with pytest.raises(ValueError):
+        dewpoint(20, 101)
     # model = 'wrong'
     with pytest.raises(ValueError):
         dewpoint(20, 50, model='wrong')
