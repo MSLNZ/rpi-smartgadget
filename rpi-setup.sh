@@ -11,6 +11,6 @@ cd ~
 python3 -m venv shtenv
 source shtenv/bin/activate
 pip install --upgrade pip
-pip install --upgrade setuptools
-pip install https://github.com/MSLNZ/rpi-smartgadget/archive/master.tar.gz
+pip install --upgrade setuptools wheel
+pip install git+https://github.com/MSLNZ/rpi-smartgadget.git
 deactivate
