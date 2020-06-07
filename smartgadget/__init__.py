@@ -7,7 +7,7 @@ from datetime import datetime
 
 from msl.network import manager, ssh
 
-__author__ = 'Joseph Borbely'
+__author__ = 'Measurement Standards Laboratory of New Zealand'
 __copyright__ = '\xa9 2019 - 2020, ' + __author__
 __version__ = '0.1.0.dev0'
 
