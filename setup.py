@@ -1,14 +1,12 @@
 import re
+import os
 import sys
+import subprocess
 from setuptools import setup
 from distutils.cmd import Command
 
 if sys.version_info[:2] < (3, 5):
     sys.exit('Python < 3.5 is not supported because the asyncio package is required')
-
-install_requires = ['msl-network>=0.5']
-if sys.platform.startswith('linux'):
-    install_requires.append('bluepy')
 
 
 class ApiDocs(Command):
@@ -93,14 +91,61 @@ def fetch_init(key):
     return re.search(r'{}\s*=\s*(.*)'.format(key), init_text).group(1)[1:-1]
 
 
+def get_version():
+    init_version = fetch_init('__version__')
+    if 'dev' not in init_version:
+        return init_version
+
+    if 'develop' in sys.argv or ('egg_info' in sys.argv and '--egg-base' not in sys.argv):
+        # then installing in editable (develop) mode
+        #   python setup.py develop
+        #   pip install -e .
+        suffix = 'editable'
+    else:
+        file_dir = os.path.dirname(os.path.abspath(__file__))
+        try:
+            # write all error messages from git to devnull
+            with open(os.devnull, 'w') as devnull:
+                out = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=file_dir, stderr=devnull)
+        except:
+            try:
+                git_dir = os.path.join(file_dir, '.git')
+                with open(os.path.join(git_dir, 'HEAD'), mode='rt') as fp1:
+                    line = fp1.readline().strip()
+                    if line.startswith('ref:'):
+                        _, ref_path = line.split()
+                        with open(os.path.join(git_dir, ref_path), mode='rt') as fp2:
+                            sha1 = fp2.readline().strip()
+                    else:  # detached HEAD
+                        sha1 = line
+            except:
+                return init_version
+        else:
+            sha1 = out.strip().decode('ascii')
+
+        suffix = sha1[:7]
+
+    if init_version.endswith(suffix):
+        return init_version
+
+    # following PEP-440, the local version identifier starts with '+'
+    return init_version + '+' + suffix
+
+
+install_requires = ['msl-network>=0.5']
+if sys.platform.startswith('linux'):
+    install_requires.append('bluepy')
+
 needs_sphinx = {'doc', 'docs', 'apidoc', 'apidocs', 'build_sphinx'}.intersection(sys.argv)
 sphinx = ['sphinx', 'sphinx_rtd_theme'] + install_requires if needs_sphinx else []
 
+version = get_version()
+
 setup(
     name='smartgadget',
-    version=fetch_init('__version__'),
+    version=version,
     author=fetch_init('__author__'),
-    author_email='joseph.borbely@measurement.govt.nz',
+    author_email='info@measurement.govt.nz',
     url='https://github.com/MSLNZ/rpi-smartgadget',
     description='Communicate with a Sensirion SHTxx Smart Gadget',
     long_description=read('README.rst'),
@@ -131,3 +176,24 @@ setup(
         ],
     },
 )
+
+if 'dev' in version and not version.endswith('editable'):
+    # ensure that the value of __version__ is correct if installing the package from an unreleased code base
+    init_path = ''
+    if sys.argv[0] == 'setup.py' and 'install' in sys.argv and not {'--help', '-h'}.intersection(sys.argv):
+        # python setup.py install
+        try:
+            cmd = [sys.executable, '-c', 'import smartgadget; print(smartgadget.__file__)']
+            output = subprocess.check_output(cmd, cwd=os.path.dirname(sys.executable))
+            init_path = output.strip().decode()
+        except:
+            pass
+    elif 'egg_info' in sys.argv:
+        # pip install
+        init_path = os.path.dirname(sys.argv[0]) + '/smartgadget/__init__.py'
+
+    if init_path and os.path.isfile(init_path):
+        with open(init_path, mode='r+') as fp:
+            source = fp.read()
+            fp.seek(0)
+            fp.write(re.sub(r'__version__\s*=.*', "__version__ = '{}'".format(version), source))
