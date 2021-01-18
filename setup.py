@@ -134,9 +134,10 @@ def get_version():
     return init_version + '+' + suffix
 
 
-install_requires = ['msl-network>=0.5']
-if sys.platform.startswith('linux'):
-    install_requires.append('bluepy')
+install_requires = [
+    'msl-network>=0.5',
+    'bluepy; "linux" in sys_platform',
+]
 
 needs_sphinx = {'doc', 'docs', 'apidoc', 'apidocs', 'build_sphinx'}.intersection(sys.argv)
 sphinx = ['sphinx', 'sphinx_rtd_theme'] + install_requires if needs_sphinx else []
