@@ -98,7 +98,7 @@ def get_version():
     if 'dev' not in init_version:
         return init_version
 
-    if 'develop' in sys.argv or ('egg_info' in sys.argv and '--egg-base' not in sys.argv):
+    if ('develop' in sys.argv) or (os.path.join('rpi-smartgadget', 'setup.py') in sys.argv[0]):
         # then installing in editable (develop) mode
         #   python setup.py develop
         #   pip install -e .
