@@ -192,6 +192,43 @@ def milliseconds_to_datetime(milliseconds):
     return datetime.fromtimestamp(milliseconds * 1e-3)
 
 
+def scan(*, interface=0, delegate=None, timeout=10, passive=False):
+    """Scan for Bluetooth devices.
+
+    This function can only be called if the `bluepy` package is installed.
+
+    Parameters
+    ----------
+    interface : :class:`int`, optional
+        The Bluetooth interface to use (where 0 is /dev/hci0).
+    delegate : :ref:`DefaultDelegate <delegate>`, optional
+        Receives a callback when broadcasts from devices are received.
+    timeout : :class:`float`, optional
+        Scan for devices for the given timeout in seconds. During this period,
+        callbacks to the `delegate` object will be called.
+    passive : :class:`bool`, optional
+        Use active (to obtain more information when connecting) or passive scanning.
+
+    Returns
+    -------
+    A `view` of :ref:`ScanEntry <scanentry>` objects.
+
+    Examples
+    --------
+    >>> import smartgadget
+    >>> for dev in smartgadget.scan():
+    ...     print('Device {!r} ({}), RSSI={} dB'.format(dev.addr, dev.addrType, dev.rssi))
+    ...     for adtype, desc, value in dev.getScanData():
+    ...         print('  {} = {}'.format(desc, value))
+    ...
+    """
+    from bluepy.btle import Scanner
+    scanner = Scanner(interface)
+    if delegate:
+        scanner.withDelegate(delegate)
+    return scanner.scan(timeout=timeout, passive=passive)
+
+
 from .client import SmartGadgetClient
 from .sht3x import SHT3XService
 from .shtc1 import SHTC1Service
