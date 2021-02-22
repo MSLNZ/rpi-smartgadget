@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # install the prerequisites
-sudo apt install python3-dev python3-venv libssl-dev libffi-dev build-essential libglib2.0-dev -y
+sudo apt-get install -y python3-dev python3-venv libssl-dev libffi-dev build-essential libglib2.0-dev git
 
 # install the rpi-smartgadget package in a virtual environment named 'shtenv'
 # which is located in the home directory. If you change the name of the
@@ -10,7 +10,7 @@ sudo apt install python3-dev python3-venv libssl-dev libffi-dev build-essential 
 cd ~
 python3 -m venv shtenv
 source shtenv/bin/activate
-pip install --upgrade pip
-pip install --upgrade setuptools wheel
-pip install git+https://github.com/MSLNZ/rpi-smartgadget.git
+python -m pip install --upgrade pip
+python -m pip install --upgrade setuptools wheel
+python -m pip install git+https://github.com/MSLNZ/rpi-smartgadget.git
 deactivate
