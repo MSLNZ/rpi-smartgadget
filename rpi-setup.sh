@@ -14,4 +14,5 @@ python -m pip install --upgrade pip
 python -m pip install --upgrade setuptools wheel
 cd rpi-smartgadget
 python -m pip install .
+chmod +x examples/*.py
 deactivate
