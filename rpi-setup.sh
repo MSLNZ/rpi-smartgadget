@@ -12,5 +12,6 @@ python3 -m venv shtenv
 source shtenv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install --upgrade setuptools wheel
-python -m pip install git+https://github.com/MSLNZ/rpi-smartgadget.git
+cd rpi-smartgadget
+python -m pip install .
 deactivate
