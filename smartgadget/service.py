@@ -38,7 +38,7 @@ class SmartGadgetService(Service):
         self._interface = interface
         self._max_attempts = 5
         self._retries_remaining = 0
-        self._scanner = Scanner()
+        self._scanner = Scanner(interface)
         self._gadgets_available = {}
         self._gadgets_connected = {}
         # only add a MAC address in here if the connection request was made explicitly
