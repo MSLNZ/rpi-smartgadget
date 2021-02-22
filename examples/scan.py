@@ -19,6 +19,6 @@ Next, execute the script
 import smartgadget
 
 for dev in smartgadget.scan():
-    print('Device {!r} ({}), RSSI={} dB'.format(dev.addr, dev.addrType, dev.rssi))
+    print('Device {} ({}), RSSI={} dB'.format(dev.addr, dev.addrType, dev.rssi))
     for adtype, desc, value in dev.getScanData():
         print('  {} = {}'.format(desc, value))
