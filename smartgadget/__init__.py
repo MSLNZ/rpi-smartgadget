@@ -212,15 +212,6 @@ def scan(*, interface=0, delegate=None, timeout=10, passive=False):
     Returns
     -------
     A `view` of :ref:`ScanEntry <scanentry>` objects.
-
-    Examples
-    --------
-    >>> import smartgadget
-    >>> for dev in smartgadget.scan():
-    ...     print('Device {!r} ({}), RSSI={} dB'.format(dev.addr, dev.addrType, dev.rssi))
-    ...     for adtype, desc, value in dev.getScanData():
-    ...         print('  {} = {}'.format(desc, value))
-    ...
     """
     from bluepy.btle import Scanner
     scanner = Scanner(interface)
