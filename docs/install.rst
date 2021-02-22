@@ -4,21 +4,28 @@
 Install RPi-SmartGadget
 =======================
 
-To set up the Raspberry Pi run the following commands. Instructions for using SSH_
-to interface with a Raspberry Pi can be found `here <ssh_instructions_>`_.
+Raspberry Pi OS
+---------------
+This section describe how to set up a Raspberry Pi.
 
-The following command is optional *(but recommended)*. It will update the
-installed packages on the Raspberry Pi
+.. note::
+   Instructions for using SSH_ to remotely access the terminal of the Raspberry Pi
+   can be found `here <ssh_instructions_>`_.
 
-.. code-block:: console
+.. tip::
+   The following command is optional *but recommended*. It will update the
+   installed packages on the Raspberry Pi.
 
-   sudo apt update && sudo apt upgrade
+    .. code-block:: console
 
-Make sure that you have git_ installed on the Raspberry Pi
+       sudo apt update && sudo apt upgrade
+
+Make sure that you have git_ installed and then clone the repository
 
 .. code-block:: console
 
    sudo apt install git
+   git clone https://github.com/MSLNZ/rpi-smartgadget.git
 
 The following will install the **RPi-SmartGadget** package in a `virtual environment`_
 in the ``/home/pi/shtenv`` directory on the Raspberry Pi *(the* ``shtenv`` *directory*
@@ -26,10 +33,10 @@ in the ``/home/pi/shtenv`` directory on the Raspberry Pi *(the* ``shtenv`` *dire
 
 .. code-block:: console
 
-   git clone https://github.com/MSLNZ/rpi-smartgadget.git
    bash rpi-smartgadget/rpi-setup.sh
-   rm -rf rpi-smartgadget
 
+Windows, Linux or macOS
+-----------------------
 To install **RPi-SmartGadget** on a computer that is not a Raspberry Pi run
 
 .. code-block:: console
@@ -44,7 +51,6 @@ Alternatively, using the :ref:`msl-package-manager-welcome` run
 
 Dependencies
 ------------
-
 Tested with a Raspberry Pi 3 Model B+ and a Raspberry Pi 4 Model B
 running either Raspbian Stretch or Buster.
 
