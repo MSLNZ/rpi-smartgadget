@@ -5,7 +5,7 @@ Examples
 ========
 
 The following examples are available to download from
-`here <https://github.com/MSLNZ/rpi-smartgadget/tree/master/examples>`_
+`here <https://github.com/MSLNZ/rpi-smartgadget/tree/main/examples>`_
 
 fetch_logged_data_remotely.py
 -----------------------------

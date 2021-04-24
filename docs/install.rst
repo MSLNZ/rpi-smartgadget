@@ -41,7 +41,7 @@ To install **RPi-SmartGadget** on a computer that is not a Raspberry Pi run
 
 .. code-block:: console
 
-   pip install https://github.com/MSLNZ/rpi-smartgadget/archive/master.tar.gz
+   pip install https://github.com/MSLNZ/rpi-smartgadget/archive/main.tar.gz
 
 Alternatively, using the :ref:`msl-package-manager-welcome` run
 
