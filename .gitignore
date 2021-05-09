@@ -45,4 +45,3 @@ htmlcov/
 junit.xml
 coverage.xml
 condatests.ini
-condatests.py
