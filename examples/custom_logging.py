@@ -51,7 +51,7 @@ while True:
                 files[address] = os.path.join(save_dir, address.replace(':', '-') + '.csv')
                 if not os.path.isfile(files[address]):
                     print('Create logging file {!r}'.format(files[address]))
-                    with open(files[address], mode='w') as f:
+                    with open(files[address], mode='wt') as f:
                         f.write('Timestamp,Battery[%],Temperature[C],Humidity[%RH],Dewpoint[C]\n')
 
         for address in mac_addresses:
@@ -60,7 +60,7 @@ while True:
             values = rpi.temperature_humidity_dewpoint(address)
             now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             print('{} [{}] {:3d} {:.3f} {:.3f} {:.3f}'.format(now, address, battery, *values))
-            with open(files[address], mode='a') as fp:
+            with open(files[address], mode='at') as fp:
                 fp.write('{},{},{},{},{}\n'.format(now, battery, *values))
 
         time.sleep(sleep)

@@ -34,7 +34,7 @@ print('Fetched {} temperature values'.format(len(temperatures)))
 rpi.disconnect()
 
 # Save the temperature results (the returned timestamps are in milliseconds)
-with open('temperature.csv', 'w') as fp:
+with open('temperature.csv', mode='wt') as fp:
     fp.write('timestamp,temperature[C]\n')
     for timestamp, value in temperatures:
         fp.write('{},{}\n'.format(milliseconds_to_datetime(timestamp), value))

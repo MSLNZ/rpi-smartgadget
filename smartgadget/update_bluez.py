@@ -71,7 +71,7 @@ def run():
     if out and not out.upper().startswith('Y'):
         sys.exit('Abort.')
 
-    with open(SCRIPT_URL, 'w') as fp:
+    with open(SCRIPT_URL, mode='wt') as fp:
         fp.writelines(BASH.format(version=version))
 
     subprocess.check_output(['chmod', '+x', SCRIPT_URL])  # make runnable

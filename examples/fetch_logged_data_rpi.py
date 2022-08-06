@@ -36,12 +36,12 @@ temperatures, humidities = s.fetch_logged_data(mac_address, num_iterations=2, as
 s.disconnect_gadgets()
 
 # Save the results
-with open('temperature.csv', 'w') as fp:
+with open('temperature.csv', mode='wt') as fp:
     fp.write('timestamp,temperature[C]\n')
     for row in temperatures:
         fp.write('{},{}\n'.format(*row))
 
-with open('humidity.csv', 'w') as fp:
+with open('humidity.csv', mode='wt') as fp:
     fp.write('timestamp,humidity[%RH]\n')
     for row in humidities:
         fp.write('{},{}\n'.format(*row))
