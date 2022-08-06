@@ -165,9 +165,9 @@ class SmartGadget(Peripheral):
             return data.decode()
         values = struct.unpack(fmt, data)
         if len(values) == 1:
-            logger.debug('READ  address={!r} characteristic=0x{:x} -> {}'.format(self.addr, hnd_or_uuid, values[0]))
+            logger.debug('READ  address=%r characteristic=0x%x -> %s', self.addr, hnd_or_uuid, values[0])
             return values[0]
-        logger.debug('READ  address={!r} characteristic=0x{:x} -> {}'.format(self.addr, hnd_or_uuid, values))
+        logger.debug('READ  address=%r characteristic=0x%x -> %s', self.addr, hnd_or_uuid, values)
         return values
 
     def _write(self, hnd_or_uuid, fmt, value, with_response=True):
@@ -177,7 +177,7 @@ class SmartGadget(Peripheral):
         fmt (str): The format to pass to struct.pack()
         value: The value to write
         """
-        logger.debug('WRITE address={!r} characteristic=0x{:x} value={}'.format(self.addr, hnd_or_uuid, value))
+        logger.debug('WRITE address=%r characteristic=0x%x value=%s', self.addr, hnd_or_uuid, value)
         data = struct.pack(fmt, value)
         if isinstance(hnd_or_uuid, int):  # handle
             self.writeCharacteristic(hnd_or_uuid, data, withResponse=with_response)

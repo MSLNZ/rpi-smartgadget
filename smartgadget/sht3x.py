@@ -665,14 +665,14 @@ class SHT3XService(SmartGadgetService):
 
             if latest_t:
                 n = len(latest_t) - len(bad_timestamps(latest_t))
-                logger.debug('Iteration {} of {} -- Fetched {} of {} temperature values in {:.3f} seconds. '
-                             '{} values are still missing'
-                             .format(iteration+1, num_iterations, n, len(latest_t), dt, len(bad_timestamps_t)))
+                logger.debug('Iteration %d of %d -- Fetched %d of %d temperature values in %.3f seconds. '
+                             '%d values are still missing',
+                             iteration+1, num_iterations, n, len(latest_t), dt, len(bad_timestamps_t))
             if latest_h:
                 n = len(latest_h) - len(bad_timestamps(latest_h))
-                logger.debug('Iteration {} of {} -- Fetched {} of {} humidity values in {:.3f} seconds. '
-                             '{} values are still missing'
-                             .format(iteration+1, num_iterations, n, len(latest_h), dt, len(bad_timestamps_h)))
+                logger.debug('Iteration %d of %d -- Fetched %d of %d humidity values in %.3f seconds. '
+                             '%d values are still missing',
+                             iteration+1, num_iterations, n, len(latest_h), dt, len(bad_timestamps_h))
 
             # Only fetch data in the range that still contains `None` values.
             # Extend the range a little bit.
@@ -701,11 +701,11 @@ class SHT3XService(SmartGadgetService):
 
         if temperatures:
             n = len(temperatures) - len(bad_timestamps(temperatures))
-            logger.debug('Finished -- Fetched {} of {} temperature values'.format(n, len(temperatures)))
+            logger.debug('Finished -- Fetched %d of %d temperature values', n, len(temperatures))
 
         if humidities:
             n = len(humidities) - len(bad_timestamps(humidities))
-            logger.debug('Finished -- Fetched {} of {} humidity values'.format(n, len(humidities)))
+            logger.debug('Finished -- Fetched %d of %d humidity values', n, len(humidities))
 
         if as_datetime:
             t = [[milliseconds_to_datetime(ms), v] for ms, v in temperatures]

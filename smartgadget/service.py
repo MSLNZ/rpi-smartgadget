@@ -70,7 +70,7 @@ class SmartGadgetService(Service):
             re-established.
         """
         self._max_attempts = max(1, int(max_attempts))
-        logger.debug('The maximum number attempts has been set to {}'.format(self._max_attempts))
+        logger.debug('The maximum number attempts has been set to %d', self._max_attempts)
 
     def scan(self, timeout=10, passive=False) -> List[str]:
         """Scan for Smart Gadgets that are within Bluetooth range.
@@ -89,11 +89,11 @@ class SmartGadgetService(Service):
             particular SHTxx class.
         """
         self._gadgets_available.clear()
-        logger.info('Scanning for {!r}...'.format(self._device_name))
+        logger.info('Scanning for %r...', self._device_name)
         for d in self._scanner.scan(timeout=timeout, passive=passive):
             if d.getValueText(d.COMPLETE_LOCAL_NAME) == self._device_name:
                 self._gadgets_available[d.addr] = d
-        logger.info('Found {} Smart Gadgets'.format(len(self._gadgets_available)))
+        logger.info('Found %d Smart Gadgets', len(self._gadgets_available))
         return list(self._gadgets_available)
 
     def connect_gadget(self, mac_address, strict=True) -> bool:
@@ -156,7 +156,7 @@ class SmartGadgetService(Service):
                     logger.error(e)
                     raise
                 else:
-                    logger.warning('Could not connect to {!r}'.format(mac_address))
+                    logger.warning('Could not connect to %r', mac_address)
                     failed_connections.append(mac_address)
         return list(self._gadgets_connected), failed_connections
 
@@ -181,7 +181,7 @@ class SmartGadgetService(Service):
         gadget = self._gadgets_connected.pop(mac_address, None)
         if gadget:
             try:
-                logger.info('Disconnecting from {!r}...'.format(mac_address))
+                logger.info('Disconnecting from %r...', mac_address)
                 gadget.disconnect()
             except:
                 pass
@@ -388,7 +388,7 @@ class SmartGadgetService(Service):
             :class:`int` in milliseconds.
         """
         date = milliseconds_to_datetime(timestamp_to_milliseconds(date))
-        logger.debug("Setting Raspberry Pi date to '{}'".format(date))
+        logger.debug('Setting Raspberry Pi date to %r', date)
         subprocess.run(['sudo', 'date', '-s', date.strftime('%a %d %b %Y %I:%M:%S %p')], check=True)
 
     def _connect(self, mac_address):
@@ -400,9 +400,9 @@ class SmartGadgetService(Service):
                 try:
                     self._retries_remaining -= 1
                     if mac_address in self._requested_connections:
-                        logger.info('Re-connecting to {!r}...'.format(mac_address))
+                        logger.info('Re-connecting to %r...', mac_address)
                     else:
-                        logger.info('Connecting to {!r}...'.format(mac_address))
+                        logger.info('Connecting to %r...', mac_address)
                     gadget = self._cls(device, interface=self._interface)
                     self._gadgets_connected[mac_address] = gadget
                 except BTLEDisconnectError as e:
@@ -410,7 +410,7 @@ class SmartGadgetService(Service):
                         logger.error(e)
                         raise
                     text = 'retry remains' if self._retries_remaining == 1 else 'retries remaining'
-                    logger.warning('{} -- {} {}'.format(e, self._retries_remaining, text))
+                    logger.warning('%s -- %s %s', e, self._retries_remaining, text)
         return gadget
 
     def _process(self, method_name, mac_address, **kwargs):
@@ -419,7 +419,7 @@ class SmartGadgetService(Service):
         while True:
             gadget = self._connect(mac_address)
             try:
-                logger.info('Processing {!r} from {!r} -- kwargs={}'.format(method_name, mac_address, kwargs))
+                logger.info('Processing %r from %r -- kwargs=%s', method_name, mac_address, kwargs)
                 out = getattr(gadget, method_name)(**kwargs)
                 if mac_address not in self._requested_connections:
                     self.disconnect_gadget(mac_address)
@@ -430,4 +430,4 @@ class SmartGadgetService(Service):
                     raise
                 self._gadgets_connected.pop(mac_address, None)
                 text = 'retry remains' if self._retries_remaining == 1 else 'retries remaining'
-                logger.warning('{} -- {} {}'.format(e, self._retries_remaining, text))
+                logger.warning('%s -- %s %s', e, self._retries_remaining, text)
